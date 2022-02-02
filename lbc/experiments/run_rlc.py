@@ -25,6 +25,12 @@ if __name__ == "__main__":
 
     from lbc.experiments.runner import parser
 
+    parser.add_argument(
+        "--node-ip-address",
+        type=str,
+        default=None,
+        help="node IP address for ray (needed if running with VPN)"
+    )
     a = parser.parse_args()
 
     # Use the args to construct a full configuration for the experiment.
@@ -34,7 +40,9 @@ if __name__ == "__main__":
         "dr_program": a.dr_program,
         "batch_size": a.batch_size,
         "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {},
+        "policy_config": {
+            "node_ip_address": a.node_ip_address
+        },
         "training": False,
         "dry_run": a.dry_run
     }
