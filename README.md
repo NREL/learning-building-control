@@ -1,7 +1,7 @@
 Installation:
 
 ```
-conda envn create -n <env-name> -f env.yaml
+conda env create -n <env-name> -f env.yaml
 pip install -e .
 ```
 
