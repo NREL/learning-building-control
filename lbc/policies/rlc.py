@@ -7,7 +7,7 @@ import ray
 
 from typing import Tuple
 
-from ray.rllib.agents.registry import get_agent_class
+from ray.rllib.agents.registry import get_trainer_class
 from ray.tune.registry import register_env
 
 from lbc.building_env import BuildingControlEnv
@@ -84,9 +84,7 @@ class RLCPolicy(Policy):
         if "num_workers" in config:
             config["num_workers"] = min(1, config["num_workers"])
 
-        print(config_path, config)
-
-        cls = get_agent_class('PPO')
+        cls = get_trainer_class('PPO')
         agent = cls(env=env_name, config=config)
         agent.restore(checkpoint)
 
