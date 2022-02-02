@@ -1,0 +1,11 @@
+{
+  "env": "BuildingControlPCEnv-v0",
+  "model": {
+    "fcnet_hiddens": [
+      128,
+      128
+    ]
+  },
+  "num_workers": 71,
+  "train_batch_size": 10000
+}
