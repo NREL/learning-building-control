@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     # Use the args to construct a full configuration for the experiment.
     config = {
-        "name": f"DPC-{a.dr_program}-{a.hidden_dim}",
+        "name": f"DPC-{a.dr_program}-{a.hidden_dim}-{a.device}",
         "policy_type": "DPC",
         "batch_size": a.batch_size,
         "dr_program": a.dr_program,
