@@ -201,7 +201,7 @@ def simulate(
 
         # Optionally update the progress bar from calling scope.
         if pbar is not None:
-            _loss = total_loss.mean().item() / num_time
+            _loss = total_loss.mean().item()
             pbar_loss = pbar_loss if pbar_loss is not None else np.inf
             pbar.set_description(
                 f"epoch={pbar_epoch}|loss={pbar_loss:1.3e}"

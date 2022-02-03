@@ -22,9 +22,9 @@ DEFAULT_RESULTS_DIR = os.path.join(THIS_DIR, "results")
 
 # Configuration dicts for scenarios.  Use _TEST for short runs.
 SCENARIO_DEFAULT = {
-    "start_time": "05:00:00",
+    "start_time": "00:05:00",
     "end_time": "23:55:00",
-    "zone_temp_init_mean": 26.0,
+    "zone_temp_init_mean": 26.0
 }
 
 SCENARIO_TEST = {
@@ -32,7 +32,6 @@ SCENARIO_TEST = {
     "end_time": "13:00:00",
     "zone_temp_init_mean": 23.0
 }
-
 
 # Policy mapping
 POLICY_MAP = {
@@ -107,7 +106,7 @@ class PolicyRunner:
         cpu_time,
     ):
 
-        loss = batched_loss.item()
+        loss = batched_loss.mean().item()
 
         logger.info(f"[{self.name}] bsz={self.batch_size},"
                     + f" loss={loss:1.3f}, time={cpu_time:1.1f}")
