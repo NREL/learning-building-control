@@ -6,13 +6,11 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --nodes=1
 
+set -x
+
 source env.sh
+source shared-env-vars.sh
 
-bsz=$1
-dr=$2
-dry=$3
-use_value=$4
-
-python run_cpl.py --bsz $bsz --dr=$dr --dry-run $dry \
-    --lookahead 4 --num-epochs 50 --use-value-function $use_value
+python run_cpl.py --bsz $BATCH_SIZE --dr=$DR_PROGRAM --dry-run $DRY_RUN \
+    --lookahead 4 --num-epochs 50 --use-value-function 1
 
