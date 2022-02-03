@@ -1,7 +1,9 @@
-#!/bin/bash
+#!/bin/bash --login
 
-dry=1
-bsz=3
+source env.sh
+
+dry=0
+bsz=30
 dr=TOU
 
 python run_mpc_one_shot.py --bsz $bsz --dr $dr --dry-run $dry
@@ -11,4 +13,5 @@ python run_mpc.py --bsz $bsz --dr $dr --dry-run $dry --lookahead=4
 python run_dpc.py --bsz $bsz --dr $dr --dry-run $dry --num-epochs=2
 python run_cpl.py --bsz $bsz --dr=$dr --dry-run $dry --lookahead 4 --num-epochs 2
 python run_cpl.py --bsz $bsz --dr=$dr --dry-run $dry --lookahead 4 --num-epochs 2 --use-value-function 0
+
 

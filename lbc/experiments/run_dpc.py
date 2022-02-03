@@ -60,6 +60,7 @@ class DPCRunner(PolicyRunner):
                 pbar.set_description(
                     f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},"
                     + f" {scheduler._last_lr[0]:1.3e}")
+                    
             except KeyboardInterrupt:
                 logger.info("stopped")
                 break
@@ -136,3 +137,4 @@ if __name__ == "__main__":
     print("ARGS:", config)
 
     _ = main(**config)
+
