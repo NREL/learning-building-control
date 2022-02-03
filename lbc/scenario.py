@@ -148,6 +148,8 @@ class Scenario:
             comfort_band = comfort_band.values[_offset:_offset +
                                                self.num_episode_steps]
 
+        print("HIII", self.num_episode_steps, comfort_band)
+
         # Cast comfort band data to array and extract separate min/max for
         # readability.
         self.comfort_band = _comfort_band_to_array(

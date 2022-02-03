@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import pathlib
 import pickle
 import time
 from typing import Tuple
@@ -17,15 +18,21 @@ logger = logging.getLogger(__name__)
 
 # Directories
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-RESULTS_DIR = os.path.join(THIS_DIR, "results")
+DEFAULT_RESULTS_DIR = os.path.join(THIS_DIR, "results")
 
 # Configuration dicts for scenarios.  Use _TEST for short runs.
-SCENARIO_DEFAULT = {}
+SCENARIO_DEFAULT = {
+    "start_time": "05:00:00",
+    "end_time": "23:55:00",
+    "zone_temp_init_mean": 26.0,
+}
+
 SCENARIO_TEST = {
     "start_time": "11:00:00",
     "end_time": "13:00:00",
     "zone_temp_init_mean": 23.0
 }
+
 
 # Policy mapping
 POLICY_MAP = {
@@ -49,7 +56,8 @@ class PolicyRunner:
         scenario_config: dict = None,
         policy_config: dict = None,
         training: bool = None,
-        dry_run: bool = None
+        dry_run: bool = None,
+        results_dir: str = None,
     ):
 
         assert policy_type in POLICY_MAP, f"invalid policy {policy_type}"
@@ -59,6 +67,7 @@ class PolicyRunner:
         self.dr_program = dr_program
         self.training = training
         self.dry_run = dry_run
+        self.results_dir = results_dir if results_dir is not None else DEFAULT_RESULTS_DIR
 
         scenario_config["dr_program"] = DemandResponseProgram(dr_program)
         self.scenario_config = scenario_config
@@ -98,13 +107,16 @@ class PolicyRunner:
         cpu_time,
     ):
 
-        loss = batched_loss.mean().item()
+        loss = batched_loss.item()
 
         logger.info(f"[{self.name}] bsz={self.batch_size},"
                     + f" loss={loss:1.3f}, time={cpu_time:1.1f}")
 
+        # Make the output directory if it doesn't exist.
+        pathlib.Path(self.results_dir).mkdir(parents=True, exist_ok=True) 
+
         if self.dry_run is not True:
-            filename = os.path.join(RESULTS_DIR, self.name + ".p")
+            filename = os.path.join(self.results_dir, self.name + ".p")
             with open(filename, "wb") as f:
                 pickle.dump(
                     {
@@ -126,6 +138,12 @@ class PolicyRunner:
 
 # Common arg parser
 parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--results-dir",
+    type=str,
+    default=None,
+    help="directory to save output in"
+)
 parser.add_argument(
     "--dr",
     type=str,
