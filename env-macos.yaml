@@ -1,13 +1,10 @@
-name: lbc
 channels:
   - conda-forge
   - defaults
 dependencies:
   - ampl-mp=3.1.0
-  - ca-certificates=2021.10.26
+  - ca-certificates=2021.10.8
   - certifi=2021.10.8
-  - flake8=3.9.2
-  - importlib-metadata=4.8.2
   - ipopt=3.14.4
   - libblas=3.9.0
   - libcxx=12.0.0
@@ -16,122 +13,122 @@ dependencies:
   - libgfortran5=9.3.0
   - liblapack=3.9.0
   - libopenblas=0.3.18
-  - libzlib=1.2.11
   - llvm-openmp=12.0.1
-  - mccabe=0.6.1
   - metis=5.1.0
   - mumps-include=5.2.1
   - mumps-seq=5.2.1
   - ncurses=6.3
-  - openssl=1.1.1m
+  - openssl=1.1.1l
   - pip=21.2.4
-  - pycodestyle=2.7.0
-  - pyflakes=2.3.1
+  - ply=3.11
+  - pyomo=6.2
   - python=3.8.12
   - python_abi=3.8
-  - readline=8.1
+  - readline=8.1.2
   - scotch=6.0.9
   - setuptools=58.0.4
-  - sqlite=3.36.0
+  - sqlite=3.37.0
   - tk=8.6.11
-  - wheel=0.37.0
+  - wheel=0.37.1
   - xz=5.2.5
   - zlib=1.2.11
   - pip:
     - absl-py==1.0.0
     - appnope==0.1.2
-    - argon2-cffi==21.2.0
+    - argon2-cffi==21.3.0
     - argon2-cffi-bindings==21.2.0
+    - asttokens==2.0.5
     - astunparse==1.6.3
-    - attrs==21.2.0
+    - attrs==21.4.0
     - backcall==0.2.0
+    - black==22.1.0
     - bleach==4.1.0
-    - cachetools==5.0.0
+    - cachetools==4.2.4
     - cffi==1.15.0
     - charset-normalizer==2.0.11
     - click==8.0.3
     - cloudpickle==2.0.0
-    - cvxpy==1.1.17
+    - cvxpy==1.1.18
     - cvxpylayers==0.1.5
     - cycler==0.11.0
     - debugpy==1.5.1
-    - decorator==5.1.0
+    - decorator==5.1.1
     - defusedxml==0.7.1
     - deprecated==1.2.13
-    - diffcp==1.0.18
+    - diffcp==1.0.19
     - dm-tree==0.1.6
-    - ecos==2.0.8
-    - entrypoints==0.3
+    - ecos==2.0.10
+    - entrypoints==0.4
+    - executing==0.8.2
     - filelock==3.4.2
-    - flatbuffers==2.0
-    - fonttools==4.28.3
-    - gast==0.5.3
-    - google-auth==2.6.0
+    - fonttools==4.29.1
+    - gast==0.3.3
+    - google-auth==1.35.0
     - google-auth-oauthlib==0.4.6
     - google-pasta==0.2.0
     - grpcio==1.43.0
     - gym==0.21.0
-    - h5py==3.6.0
+    - h5py==2.10.0
     - idna==3.3
     - imageio==2.14.1
+    - importlib-metadata==4.10.1
     - importlib-resources==5.4.0
-    - ipykernel==6.6.0
-    - ipython==7.30.1
+    - ipykernel==6.8.0
+    - ipython==8.0.1
     - ipython-genutils==0.2.0
     - ipywidgets==7.6.5
     - jedi==0.18.1
     - jinja2==3.0.3
-    - jsonschema==4.2.1
+    - jsonschema==4.4.0
     - jupyter==1.0.0
-    - jupyter-client==7.1.0
+    - jupyter-client==7.1.2
     - jupyter-console==6.4.0
     - jupyter-core==4.9.1
     - jupyterlab-pygments==0.1.2
     - jupyterlab-widgets==1.0.2
-    - keras==2.8.0
     - keras-preprocessing==1.1.2
     - kiwisolver==1.3.2
-    - libclang==13.0.0
     - lz4==3.1.10
     - markdown==3.3.6
     - markupsafe==2.0.1
-    - matplotlib==3.5.0
+    - matplotlib==3.5.1
     - matplotlib-inline==0.1.3
-    - matplotlip==0.2
     - mistune==0.8.4
     - msgpack==1.0.3
-    - nbclient==0.5.9
-    - nbconvert==6.3.0
+    - mypy-extensions==0.4.3
+    - nbclient==0.5.10
+    - nbconvert==6.4.1
     - nbformat==5.1.3
     - nest-asyncio==1.5.4
     - networkx==2.6.3
     - nose==1.3.7
-    - notebook==6.4.6
-    - numpy==1.21.4
+    - notebook==6.4.8
+    - numpy==1.19.5
     - oauthlib==3.2.0
     - opt-einsum==3.3.0
-    - osqp==0.6.2.post0
+    - osqp==0.6.2.post5
     - packaging==21.3
-    - pandas==1.3.4
+    - pandas==1.4.0
     - pandocfilters==1.5.0
     - parso==0.8.3
+    - pathspec==0.9.0
     - pexpect==4.8.0
     - pickle5==0.0.11
     - pickleshare==0.7.5
-    - pillow==8.4.0
-    - ply==3.11
-    - prometheus-client==0.12.0
-    - prompt-toolkit==3.0.24
+    - pillow==9.0.1
+    - platformdirs==2.4.1
+    - prometheus-client==0.13.1
+    - prompt-toolkit==3.0.26
     - protobuf==3.19.4
     - ptyprocess==0.7.0
+    - pure-eval==0.2.2
     - pyasn1==0.4.8
     - pyasn1-modules==0.2.8
-    - pybind11==2.8.1
+    - pybind11==2.9.1
     - pycparser==2.21
-    - pygments==2.10.0
-    - pyomo==6.2
-    - pyparsing==3.0.6
-    - pyrsistent==0.18.0
+    - pygments==2.11.2
+    - pyparsing==3.0.7
+    - pyrsistent==0.18.1
     - python-dateutil==2.8.2
     - pytz==2021.3
     - pyutilib==6.0.0
@@ -139,37 +136,35 @@ dependencies:
     - pyyaml==6.0
     - pyzmq==22.3.0
     - qdldl==0.1.5.post0
-    - qtconsole==5.2.1
-    - qtpy==1.11.3
-    - ray==1.9.2
+    - qtconsole==5.2.2
+    - qtpy==2.0.1
+    - ray==1.6.0
     - redis==4.1.2
     - requests==2.27.1
     - requests-oauthlib==1.3.1
     - rsa==4.8
     - scikit-image==0.19.1
-    - scipy==1.7.3
-    - scs==2.1.4
+    - scipy==1.4.1
+    - scs==3.1.0
     - seaborn==0.11.2
     - send2trash==1.8.0
-    - setuptools-scm==6.3.2
     - six==1.16.0
+    - stack-data==0.1.4
     - tabulate==0.8.9
-    - tensorboard==2.8.0
-    - tensorboard-data-server==0.6.1
+    - tensorboard==2.2.2
     - tensorboard-plugin-wit==1.8.1
     - tensorboardx==2.4.1
-    - tensorflow==2.8.0
-    - tensorflow-io-gcs-filesystem==0.23.1
+    - tensorflow==2.2.0
+    - tensorflow-estimator==2.2.0
     - termcolor==1.1.0
-    - terminado==0.12.1
+    - terminado==0.13.1
     - testpath==0.5.0
-    - tf-estimator-nightly==2.8.0.dev2021122109
-    - threadpoolctl==3.0.0
-    - tifffile==2021.11.2
-    - tomli==1.2.2
-    - torch==1.10.0
-    - torchaudio==0.10.0
-    - torchvision==0.11.1
+    - threadpoolctl==3.1.0
+    - tifffile==2022.2.2
+    - tomli==2.0.0
+    - torch==1.10.2
+    - torchaudio==0.10.2
+    - torchvision==0.11.3
     - tornado==6.1
     - tqdm==4.62.3
     - traitlets==5.1.1
@@ -180,5 +175,4 @@ dependencies:
     - werkzeug==2.0.2
     - widgetsnbextension==3.5.2
     - wrapt==1.13.3
-    - zipp==3.6.0
-prefix: /Users/dbiagion/miniconda3/envs/lbc
+    - zipp==3.7.0
