@@ -9,9 +9,9 @@ Each policy has a `run_{policy}.py` script that has argparser help,
 Common arguments for all policies are:
 
 ```
-    --dry-run=<0,1>
-    --bsz <batch_size>
-    --dr <TOU,RTP,PC>
+    --dry-run {0,1}
+    --bsz {batch_size}
+    --dr {TOU,RTP,PC}
 ```
 
 Setting `--dry-run=1` enables rapid testing: a very short scenario is used, and output
