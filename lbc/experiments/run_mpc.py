@@ -40,7 +40,7 @@ if __name__ == "__main__":
         "batch_size": a.batch_size,
         "dr_program": a.dr_program,
         "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {"lookahead": a.lookahead},
+        "policy_config": {"num_lookahead_steps": a.lookahead},
         "training": False,
         "dry_run": a.dry_run
     }
