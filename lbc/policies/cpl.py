@@ -13,7 +13,7 @@ from lbc.scenario import Scenario
 from lbc.utils import to_torch
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 
 class CPLModel:

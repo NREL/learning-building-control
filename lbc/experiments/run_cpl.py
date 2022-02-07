@@ -87,7 +87,7 @@ class CPLRunner(PolicyRunner):
                 # scheduler.step(test_loss)
 
                 if test_losses[-1] < best_test_loss:
-                    best_test_loss = test_losses[-1]
+                    best_test_loss = float(test_losses[-1].detach().numpy().squeeze())
                     best_model = [q.clone().detach(), Q_sqrt.clone().detach()]
 
                 pbar.set_description(
@@ -105,7 +105,7 @@ class CPLRunner(PolicyRunner):
             "test_losses": test_losses
         })
 
-        return test_total_loss, test_rollout, meta
+        return best_test_loss, test_rollout, meta
 
 
 def main(**kwargs):

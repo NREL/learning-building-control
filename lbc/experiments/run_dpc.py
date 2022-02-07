@@ -51,7 +51,7 @@ class DPCRunner(PolicyRunner):
                 scheduler.step(test_loss)
 
                 losses.append(loss.detach().numpy())
-                test_losses.append(test_loss.detach().numpy())
+                test_losses.append(float(test_loss.detach().numpy().squeeze()))
 
                 if test_losses[-1] < best_test_loss:
                     best_test_loss = test_losses[-1]
@@ -72,7 +72,7 @@ class DPCRunner(PolicyRunner):
             "test_losses": test_losses
         })
 
-        return test_total_loss, test_rollout, meta
+        return best_test_loss, test_rollout, meta
 
 
 def main(**kwargs):
