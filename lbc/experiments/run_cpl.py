@@ -32,10 +32,11 @@ class CPLRunner(PolicyRunner):
 
         opt = torch.optim.Adam([q, Q_sqrt], lr=self.policy_config["lr"])
 
-        # Set to None if not unused
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(opt,
-                                                         milestones=[33, 66],
-                                                         gamma=0.1)
+        # # Set to None if not unused
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        #     opt,
+        #     milestones=[33, 66],
+        #     gamma=0.1)
 
         # If not learning the value function, we'll just run once against the
         # test set.
@@ -83,15 +84,15 @@ class CPLRunner(PolicyRunner):
                 test_loss = test_total_loss.mean()
                 test_losses.append(test_loss.detach().numpy())
 
-                scheduler.step(test_loss)
+                # scheduler.step(test_loss)
 
                 if test_losses[-1] < best_test_loss:
                     best_test_loss = test_losses[-1]
                     best_model = [q.clone().detach(), Q_sqrt.clone().detach()]
 
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},"
-                    + f" {scheduler._last_lr[0]:1.3e}")
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},")
+                    # + f" {scheduler._last_lr[0]:1.3e}")
 
             except KeyboardInterrupt:
                 logger.info("stopped")
@@ -150,7 +151,7 @@ if __name__ == "__main__":
 
     # Use the args to construct a full configuration for the experiment.
     config = {
-        "name": f"CPL-{a.dr_program}-N={a.lookahead}-V={a.use_value_function}",
+        "name": f"CPL-{a.dr_program}-{a.lookahead}-q={a.use_value_function}",
         "policy_type": "CPL",
         "batch_size": a.batch_size,
         "dr_program": a.dr_program,

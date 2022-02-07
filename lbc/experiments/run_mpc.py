@@ -11,7 +11,8 @@ logger = logging.getLogger(__file__)
 class MPCRunner(PolicyRunner):
     def run_policy(self, policy):
         loss, rollout, meta = simulate(
-            policy=policy, scenario=self.scenario, batch_size=self.batch_size)
+            policy=policy, scenario=self.scenario, batch_size=self.batch_size,
+            use_tqdm=True)
         return loss, rollout, meta
 
 

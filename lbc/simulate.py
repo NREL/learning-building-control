@@ -14,6 +14,8 @@ from lbc.scenario import Scenario
 from lbc.rollout import Rollout
 from lbc.utils import to_torch
 
+from tqdm import tqdm
+
 
 logger = logging.getLogger(__name__)
 
