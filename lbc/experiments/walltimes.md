@@ -13,8 +13,8 @@ MPC-TOU-24        2:00:00
 MPC-TOU-36        4:00:00
 MPC-TOU-4         1:00:00
 MPC-TOU-8         1:00:00
-MPCOneShot-TOU    30:00:00
-RLC-TOU           10:00:00
+MPCOneShot-TOU    30:00
+RLC-TOU           10:00
 ```
 
 
