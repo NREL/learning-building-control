@@ -13,7 +13,9 @@ logger = logging.getLogger(__file__)
 
 def main(dr):
 
-    files = glob.glob(f"./results/*-{dr}-*.p")
+    dr = dr if dr is not None else "*"
+
+    files = glob.glob(f"./results/*{dr}*.p")
     files = sorted(files)
     logger.info(f" Found {len(files)} files: {files}")
 
@@ -41,7 +43,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "dr",
+        "--dr",
+        default=None,
         type=str,
         help="DR program",
         choices=["TOU", "RTP", "PC"])
