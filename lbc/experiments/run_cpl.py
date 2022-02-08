@@ -88,10 +88,7 @@ class CPLRunner(PolicyRunner):
                 scheduler.step()
 
                 if test_losses[-1] < best_test_loss:
-                    try:
-                        best_test_loss = float(test_losses[-1].detach().numpy().squeeze())
-                    except:
-                        best_test_loss = float(np.array(test_losses[-1]).squeeze())
+                    best_test_loss = test_losses[-1]
                     best_model = [q.clone().detach(), Q_sqrt.clone().detach()]
 
                 pbar.set_description(
