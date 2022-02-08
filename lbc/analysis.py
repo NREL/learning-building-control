@@ -78,8 +78,10 @@ def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
             x=index, y1=y1[i], y2=y2[i], alpha=0.2, color=colors[i])
 
     if secondary is not None and secondary in rollout.data.keys():
+        _y = rollout.data[secondary]
+        _y = _y.mean(-1) if np.ndim(_y) > 1 else _y
         _x = pd.DataFrame(
-            rollout.data[secondary].mean(-1), columns=[secondary], index=index)
+            _y, columns=[secondary], index=index)
         _x.plot(secondary_y=True, ax=ax, linestyle=":", c="k")
 
     if key == "zone_temp":
