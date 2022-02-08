@@ -37,6 +37,7 @@ class CPLRunner(PolicyRunner):
         #     opt,
         #     milestones=[33, 66],
         #     gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.1)
 
         # If not learning the value function, we'll just run once against the
         # test set.
@@ -84,15 +85,18 @@ class CPLRunner(PolicyRunner):
                 test_loss = test_total_loss.mean()
                 test_losses.append(test_loss.detach().numpy())
 
-                # scheduler.step(test_loss)
+                scheduler.step()
 
                 if test_losses[-1] < best_test_loss:
-                    best_test_loss = float(test_losses[-1].detach().numpy().squeeze())
+                    try:
+                        best_test_loss = float(test_losses[-1].detach().numpy().squeeze())
+                    except:
+                        best_test_loss = float(np.array(test_losses[-1]).squeeze())
                     best_model = [q.clone().detach(), Q_sqrt.clone().detach()]
 
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},")
-                    # + f" {scheduler._last_lr[0]:1.3e}")
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}" \
+                    + f" {scheduler._last_lr[0]:1.3e}")
 
             except KeyboardInterrupt:
                 logger.info("stopped")
