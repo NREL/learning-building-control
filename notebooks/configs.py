@@ -2,7 +2,7 @@ from lbc.experiments.runner import SCENARIO_DEFAULT
 
 results_dir = "./_scratch"
 
-def make_configs(dr, batch_size):
+def make_configs(dr, batch_size, lookahead=None):
 
     configs = {
         "DPC": {
@@ -33,8 +33,18 @@ def make_configs(dr, batch_size):
             "training": False,
             "dry_run": 0,
             "results_dir": results_dir
+        },
+        "MPC": {
+            "name": f"MPC-{dr}-test",
+            "policy_type": "MPC",
+            "batch_size": batch_size,
+            "dr_program": dr,
+            "scenario_config": SCENARIO_DEFAULT,
+            "policy_config": {"num_lookahead_steps": lookahead},
+            "training": False,
+            "dry_run": 0,
+            "results_dir": results_dir
         }
     }
 
     return configs
-    

@@ -88,7 +88,8 @@ class DPCPolicy(Policy):
         device = self.device
 
         energy_price = to_torch(
-            batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
+            #batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
+            batch.energy_price[:, t].reshape((-1, 1))).to(device)
 
         t_torch = (t // self.model.num_intervals) \
             * torch.ones(bsz, dtype=torch.long).to(device)  # / num_time
