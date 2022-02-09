@@ -32,11 +32,6 @@ class CPLRunner(PolicyRunner):
 
         opt = torch.optim.Adam([q, Q_sqrt], lr=self.policy_config["lr"])
 
-        # # Set to None if not unused
-        # scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        #     opt,
-        #     milestones=[33, 66],
-        #     gamma=0.1)
         scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.1)
 
         # If not learning the value function, we'll just run once against the

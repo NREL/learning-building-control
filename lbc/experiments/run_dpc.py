@@ -21,8 +21,9 @@ class DPCRunner(PolicyRunner):
         opt = torch.optim.Adam(policy.model.parameters(),
                                lr=self.policy_config["lr"])
 
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            opt, factor=0.5, patience=10, cooldown=10)
+        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #     opt, factor=0.5, patience=10, cooldown=10)
+        scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=500, gamma=np.sqrt(.1))
 
         best_test_loss = np.inf
         best_model = None
@@ -48,10 +49,11 @@ class DPCRunner(PolicyRunner):
                     policy=policy, scenario=self.scenario, batch_size=31,
                     training=False)
                 test_loss = test_total_loss.mean()
-                scheduler.step(test_loss)
+                
+                scheduler.step()
 
                 losses.append(loss.detach().numpy())
-                test_losses.append(float(test_loss.detach().numpy().squeeze()))
+                test_losses.append(test_loss)
 
                 if test_losses[-1] < best_test_loss:
                     best_test_loss = test_losses[-1]
@@ -112,6 +114,7 @@ if __name__ == "__main__":
         "--device",
         type=str,
         default="cpu",
+        choices=["cpu", "cuda"],
         help="torch device"
     )
     a = parser.parse_args()

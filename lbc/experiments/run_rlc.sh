@@ -6,10 +6,10 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --nodes=1
 
+set -x
+
 source env.sh
+source shared-env-vars.sh
 
-bsz=$1
-dr=$2
-dry=$3
-
-python run_rlc.py --bsz $bsz --dr $dr --dry-run $dry
+python run_rlc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM --dry-run $DRY_RUN \
+    --results-dir $RESDIR

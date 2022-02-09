@@ -1,8 +1,7 @@
 #!/bin/bash --login
 #SBATCH --account=aumc
-#SBATCH --job-name=lbc
+#SBATCH --job-name=dpc
 #SBATCH --qos=high
-#SBATCH --time=1:00:00
 #SBATCH --tasks-per-node=1
 #SBATCH --nodes=1
 
@@ -11,5 +10,6 @@ set -x
 source env.sh
 source shared-env-vars.sh
 
-python run_dpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM --dry-run $DRY_RUN --num-epochs=200
+python run_dpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM --dry-run $DRY_RUN \
+    --num-epochs 1000 --results-dir $RESDIR
 
