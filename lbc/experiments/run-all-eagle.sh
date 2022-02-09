@@ -41,3 +41,7 @@ sbatch --time=8:00:00 run_cpl.sh 12 1
 
 # DPC
 sbatch --time=2:00:00 run_dpc.sh
+
+# RLS
+sbatch --time=30:00 run_rlc.sh
+
