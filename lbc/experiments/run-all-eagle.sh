@@ -3,8 +3,14 @@
 # Exit on failure so you can troubleshoot
 set -xe
 
-# All runs get these variables
-source shared-env-vars.sh
+# Shared settings
+DR_PROGRAM=TOU
+DRY_RUN=0
+BATCH_SIZE=31
+
+# Results dir, export so scripts have it
+export RESDIR=$PWD/results-$DR_PROGRAM
+mkdir -p $RESDIR
 
 # RBC
 sbatch --time=10:00 run_rbc.sh

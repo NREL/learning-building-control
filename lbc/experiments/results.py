@@ -13,9 +13,9 @@ logger = logging.getLogger(__file__)
 
 def main(dr):
 
-    dr = dr if dr is not None else "*"
-
-    files = glob.glob(f"./results-{dr}/*.p")
+    dirname = f"results-{dr}"
+    print(dirname)
+    files = glob.glob(os.path.join(dirname, "*.p"))
     files = sorted(files)
     logger.info(f" Found {len(files)} files: {files}")
 

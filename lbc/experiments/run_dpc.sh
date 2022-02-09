@@ -8,7 +8,6 @@
 set -x
 
 source env.sh
-source shared-env-vars.sh
 
 python run_dpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM --dry-run $DRY_RUN \
     --num-epochs 1000 --results-dir $RESDIR

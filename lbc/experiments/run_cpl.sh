@@ -8,7 +8,6 @@
 set -x
 
 source env.sh
-source shared-env-vars.sh
 
 python run_cpl.py --bsz $BATCH_SIZE --dr=$DR_PROGRAM --dry-run $DRY_RUN \
     --lookahead $1 --num-epochs 50 --use-value-function $2 --lr 10 \
