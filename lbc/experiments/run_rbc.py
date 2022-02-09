@@ -66,7 +66,8 @@ if __name__ == "__main__":
             "p_temp": a.p_temp
         },
         "training": False,
-        "dry_run": a.dry_run
+        "dry_run": a.dry_run,
+        "results_dir": a.results_dir
     }
     print("ARGS:", config)
 

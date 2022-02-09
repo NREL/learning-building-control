@@ -160,7 +160,8 @@ if __name__ == "__main__":
             "num_value_interval_steps": a.num_value_interval_steps,
         },
         "training": bool(a.use_value_function),
-        "dry_run": a.dry_run
+        "dry_run": a.dry_run,
+        "results_dir": a.results_dir
     }
     print("ARGS:", config)
 

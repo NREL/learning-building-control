@@ -135,7 +135,8 @@ if __name__ == "__main__":
             "num_epochs": a.num_epochs,
         },
         "training": True,
-        "dry_run": a.dry_run
+        "dry_run": a.dry_run,
+        "results_dir": a.results_dir
     }
     print("ARGS:", config)
 

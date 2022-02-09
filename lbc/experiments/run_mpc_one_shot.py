@@ -35,7 +35,8 @@ if __name__ == "__main__":
         "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
         "policy_config": {},
         "training": False,
-        "dry_run": a.dry_run
+        "dry_run": a.dry_run,
+        "results_dir": a.results_dir
     }
     print("ARGS:", config)
 

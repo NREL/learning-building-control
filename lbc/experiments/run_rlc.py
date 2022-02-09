@@ -44,7 +44,8 @@ if __name__ == "__main__":
             "node_ip_address": a.node_ip_address
         },
         "training": False,
-        "dry_run": a.dry_run
+        "dry_run": a.dry_run,
+        "results_dir": a.results_dir
     }
     print("ARGS:", config)
 
