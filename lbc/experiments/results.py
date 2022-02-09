@@ -34,6 +34,7 @@ def main(dr):
             logger.info(result)
 
     df = pd.DataFrame(data).T
+    df = df.sort_values("test_loss")
     print(df)
 
 

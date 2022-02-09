@@ -23,7 +23,7 @@ class DPCRunner(PolicyRunner):
 
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #     opt, factor=0.5, patience=10, cooldown=10)
-        scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=500, gamma=np.sqrt(.1))
+        # scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=500, gamma=np.sqrt(.1))
 
         best_test_loss = np.inf
         best_model = None
@@ -50,7 +50,7 @@ class DPCRunner(PolicyRunner):
                     training=False)
                 test_loss = test_total_loss.mean()
                 
-                scheduler.step()
+                # scheduler.step()
 
                 losses.append(loss.detach().numpy())
                 test_losses.append(test_loss)
@@ -60,8 +60,8 @@ class DPCRunner(PolicyRunner):
                     best_model = deepcopy(policy.model)
 
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},"
-                    + f" {scheduler._last_lr[0]:1.3e}")
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},")
+                    #+ f" {scheduler._last_lr[0]:1.3e}")
                     
             except KeyboardInterrupt:
                 logger.info("stopped")
