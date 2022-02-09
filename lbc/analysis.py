@@ -95,3 +95,35 @@ def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
         comfort_max.plot(ax=ax, linestyle=":", c="k")
 
     return fig, ax
+
+def run_analysis(rollout, dr, figsize=(10,3), secondary=False):
+    
+    assert dr in ["TOU", "PC", "RTP"]
+
+    df = summarize_rollout(rollout)
+    
+    if secondary is True:
+        if dr == "PC":
+            secondary = "pc_limit"
+        else:
+            secondary = "energy_price"
+    
+    keys = [
+        "zone_temp",
+        "discharge_temp",
+        "zone_flow",
+        "total_cost",
+        "total_power",
+        "fan_power",
+        "chiller_power", 
+        "comfort_viol_deg_hr"
+    ]
+    
+    figs = {}
+    for key in keys:
+        s = None if key == "zone_temp" else secondary
+        fig, ax = plot_stats(rollout, key, figsize=figsize, secondary=s)
+        ax.set_title(key)
+        figs[key] = (fig, ax)
+        
+    return rollout, df, figs

@@ -98,6 +98,9 @@ class PolicyRunner:
         # Save the results
         self.save(rollout, meta, loss, cpu_time)
 
+        return loss, rollout, meta
+
+
     def save(
         self,
         rollout,
