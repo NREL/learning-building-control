@@ -4,9 +4,9 @@
 set -xe
 
 # Shared settings
-DR_PROGRAM=TOU
-DRY_RUN=0
-BATCH_SIZE=31
+export DR_PROGRAM=PC
+export DRY_RUN=0
+export BATCH_SIZE=31
 
 # Results dir, export so scripts have it
 export RESDIR=$PWD/results-$DR_PROGRAM
