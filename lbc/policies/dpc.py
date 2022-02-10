@@ -29,7 +29,7 @@ class SingleStepDPCModel(nn.Module):
 
         super().__init__(**kwargs)
 
-        input_size = 2 * self.num_zones + 4 * self.num_zones + 2
+        input_size = 2 * self.num_zones + 4 * self.num_zones + 3
         self.num_time_windows = num_time_windows
         self.num_episode_steps = num_episode_steps
         self.steps_per_window = ceil(num_episode_steps / num_time_windows)
@@ -38,10 +38,10 @@ class SingleStepDPCModel(nn.Module):
         self.embed = nn.Embedding(num_time_windows, embedding_dim=embed_dim)
         self.embed_layer = nn.Linear(embed_dim, hidden_dim)
         self.policy1 = nn.Linear(input_size, hidden_dim)
-        self.policy2 = nn.Linear(2*hidden_dim, hidden_dim)
+        self.policy2 = nn.Linear(2 * hidden_dim, hidden_dim)
         self.policy3 = nn.Linear(hidden_dim, self.num_zones + 1)
 
-    def forward(self, *, x, u, t, energy_price, zone_temp, pc_limit=None):
+    def forward(self, *, x, u, t, energy_price, zone_temp, temp_oa, pc_limit=None):
 
         t_embed = self.embed(t)
         x_t = self.embed_layer(t_embed)
@@ -51,7 +51,7 @@ class SingleStepDPCModel(nn.Module):
 
         x_pi = torch.cat(
             (x, zone_temp, u.reshape(-1, u.shape[1] * u.shape[2]),
-             energy_price, pc_limit),
+             energy_price, temp_oa, pc_limit),
             axis=-1)
         x_pi = F.relu(self.policy1(x_pi))
 
@@ -105,7 +105,9 @@ class DPCPolicy(Policy):
             batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
 
         t_torch = floor(t / self.model.steps_per_window) \
-            * torch.ones(bsz, dtype=torch.long).to(device)  # / num_time
+            * torch.ones(bsz, dtype=torch.long).to(device)  # / num_time 
+
+        temp_oa = batch.temp_oa[:, t].reshape(-1, 1).to(device)
 
         if scenario.dr_program.program_type == "PC":
             pc_limit = scenario.dr_program.power_limit.values[t][0] * torch.ones(bsz, 1)
@@ -114,7 +116,7 @@ class DPCPolicy(Policy):
 
         action = self.model(
             x=x, u=u, t=t_torch, energy_price=energy_price, 
-            zone_temp=zone_temp, pc_limit=pc_limit)
+            zone_temp=zone_temp, temp_oa=temp_oa, pc_limit=pc_limit)
 
         if self.exploration_noise_std is not None and training:
             noise = self.exploration_noise_std \
