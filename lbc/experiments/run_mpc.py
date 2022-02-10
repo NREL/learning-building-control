@@ -31,6 +31,11 @@ if __name__ == "__main__":
         default=2,
         help="number of lookahead steps"
     )
+    parser.add_arugment(
+        "--tee",
+        action="store_true",
+        help="turn on solver logging"
+    )
     a = parser.parse_args()
 
     # Use the args to construct a full configuration for the experiment.
@@ -40,7 +45,7 @@ if __name__ == "__main__":
         "batch_size": a.batch_size,
         "dr_program": a.dr_program,
         "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {"num_lookahead_steps": a.lookahead},
+        "policy_config": {"num_lookahead_steps": a.lookahead, "tee": a.tee},
         "training": False,
         "dry_run": a.dry_run,
         "results_dir": a.results_dir

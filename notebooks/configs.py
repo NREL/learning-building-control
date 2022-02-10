@@ -29,7 +29,7 @@ def make_configs(dr, batch_size, lookahead=None):
             "dr_program": dr,
             "batch_size": batch_size,
             "scenario_config": SCENARIO_DEFAULT,
-            "policy_config": {},
+            "policy_config": {"tee": False},
             "training": False,
             "dry_run": 0,
             "results_dir": results_dir
@@ -40,7 +40,7 @@ def make_configs(dr, batch_size, lookahead=None):
             "batch_size": batch_size,
             "dr_program": dr,
             "scenario_config": SCENARIO_DEFAULT,
-            "policy_config": {"num_lookahead_steps": lookahead},
+            "policy_config": {"num_lookahead_steps": lookahead, "tee": False},
             "training": False,
             "dry_run": 0,
             "results_dir": results_dir

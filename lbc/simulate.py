@@ -112,7 +112,7 @@ def simulate(
         # What each class does with them is up to the user.
         action, policy_meta = policy(
             scenario=scenario, batch=batch, t=t, u=u,
-            x=x, zone_temp=zone_temp,  action_init=action_init,
+            x=x, zone_temp=zone_temp, action_init=action_init,
             training=training, **policy_kwargs
         )
 
@@ -203,19 +203,19 @@ def simulate(
 
         # Optionally update the progress bar from calling scope.
         if pbar is not None:
-            _loss = total_loss.mean().item()
+            _loss = total_loss.item()
             pbar_loss = pbar_loss if pbar_loss is not None else np.inf
             pbar.set_description(
                 f"epoch={pbar_epoch}|loss={pbar_loss:1.3e}"
                 + f"|step={t+1}/{num_time}|{_loss:1.3e}")
 
     # Average loss per time step
-    total_loss /= num_time
+    # total_loss /= num_time
 
     # Stack the arrays in the rollout data
     rollout.finalize()
 
     # Add cpu time to policy metadata
-    policy_meta = {"cpu_time": time.time() - tic}
+    policy_meta.update({"cpu_time": time.time() - tic})
 
     return total_loss, rollout, policy_meta

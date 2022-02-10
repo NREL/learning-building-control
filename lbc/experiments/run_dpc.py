@@ -37,11 +37,15 @@ class DPCRunner(PolicyRunner):
                 total_loss, _, _ = simulate(
                     policy=policy, scenario=self.scenario,
                     batch_size=self.batch_size)
-
                 loss = total_loss.mean()
 
+                # Normalize the loss function by number steps so we can
+                # stably handle different episode lengths with the same lr.
+                opt_loss = loss / self.scenario.num_episode_steps
+
+                # Gradient update.
                 opt.zero_grad()
-                loss.backward()
+                opt_loss.backward()
                 opt.step()
 
                 # Evaluate on the test set
@@ -52,6 +56,7 @@ class DPCRunner(PolicyRunner):
                 
                 # scheduler.step()
 
+                # Track the training and test losses.
                 losses.append(loss.detach().numpy())
                 test_losses.append(test_loss)
 

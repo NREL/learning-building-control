@@ -41,7 +41,7 @@ def summarize_rollout(
 
 
 def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
-               ax=None, figsize=(8, 4)):
+               ax=None, figsize=(5, 3)):
 
     if key == "zone_flow":
         data = rollout.data["clipped_action"][:, :, :-1]
@@ -94,9 +94,11 @@ def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
         comfort_min.plot(ax=ax, linestyle=":", c="k")
         comfort_max.plot(ax=ax, linestyle=":", c="k")
 
+    plt.tight_layout()
+
     return fig, ax
 
-def run_analysis(rollout, dr, figsize=(10,3), secondary=False):
+def run_analysis(rollout, dr, figsize=(6, 2), secondary=False):
     
     assert dr in ["TOU", "PC", "RTP"]
 
@@ -127,3 +129,20 @@ def run_analysis(rollout, dr, figsize=(10,3), secondary=False):
         figs[key] = (fig, ax)
         
     return rollout, df, figs
+
+
+def plot_costs(rollout, figsize=(6, 10), secondary=None):
+
+    df = summarize_rollout(rollout)
+
+    keys = [k for k in rollout.data.keys() if k.endswith("cost")]
+
+    fig, ax = plt.subplots(len(keys))
+    fig.set_size_inches(figsize)
+    for i, key in enumerate(keys):
+        _ = plot_stats(rollout, key, figsize=figsize, secondary=secondary, ax=ax[i])
+        tot = rollout.data[key].sum(0).mean(-1)
+        ax[i].set_title(f"{key} ({tot:.3f})")
+    plt.tight_layout()
+
+    return rollout, df, fig
