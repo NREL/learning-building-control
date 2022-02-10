@@ -18,8 +18,8 @@ class DPCRunner(PolicyRunner):
 
     def run_policy(self, policy):
 
-        opt = torch.optim.Adam(policy.model.parameters(),
-                               lr=self.policy_config["lr"])
+        opt = torch.optim.Adam(
+            policy.model.parameters(), lr=self.policy_config["lr"])
 
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #     opt, factor=0.5, patience=10, cooldown=10)
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         "policy_config": {
             "model_config": {
                 "hidden_dim": a.hidden_dim,
-                "num_intervals": a.num_intervals
+                "num_time_windows": a.num_time_windows
             },
             "lr": a.lr,
             "num_epochs": a.num_epochs,

@@ -1,4 +1,5 @@
 import logging
+from math import ceil, floor
 from typing import Tuple
 
 import torch
@@ -19,32 +20,38 @@ class SingleStepDPCModel(nn.Module):
 
     def __init__(
         self,
-        num_intervals: int,
+        num_time_windows: int,
+        num_episode_steps: int,
         hidden_dim: int = 64,
-        embed_dim: int = 16,
+        embed_dim: int = 32,
         **kwargs
     ):
 
         super().__init__(**kwargs)
 
-        input_size = 2 * self.num_zones + 4 * self.num_zones + 1
-        self.num_intervals = num_intervals
+        input_size = 2 * self.num_zones + 4 * self.num_zones + 2
+        self.num_time_windows = num_time_windows
+        self.num_episode_steps = num_episode_steps
+        self.steps_per_window = ceil(num_episode_steps / num_time_windows)
 
         # # Create the policy layers.
-        self.embed = nn.Embedding(num_intervals, embedding_dim=embed_dim)
+        self.embed = nn.Embedding(num_time_windows, embedding_dim=embed_dim)
         self.embed_layer = nn.Linear(embed_dim, hidden_dim)
         self.policy1 = nn.Linear(input_size, hidden_dim)
         self.policy2 = nn.Linear(2*hidden_dim, hidden_dim)
         self.policy3 = nn.Linear(hidden_dim, self.num_zones + 1)
 
-    def forward(self, *, x, u, t, energy_price, zone_temp):
+    def forward(self, *, x, u, t, energy_price, zone_temp, pc_limit=None):
 
         t_embed = self.embed(t)
         x_t = self.embed_layer(t_embed)
 
+        if pc_limit is None:
+            pc_limit = torch.zeros_like(energy_price)
+
         x_pi = torch.cat(
             (x, zone_temp, u.reshape(-1, u.shape[1] * u.shape[2]),
-             energy_price),
+             energy_price, pc_limit),
             axis=-1)
         x_pi = F.relu(self.policy1(x_pi))
 
@@ -60,6 +67,7 @@ class DPCPolicy(Policy):
     def __init__(
         self,
         model_config: dict,
+        scenario: Scenario,
         device: str = "cpu",
         exploration_noise_std: float = None,
         **kwargs
@@ -68,7 +76,13 @@ class DPCPolicy(Policy):
         super().__init__()
 
         self.device = device
+
+        # Update the model config with num episode steps to compute time embed.
+        model_config.update({
+            "num_episode_steps": scenario.num_episode_steps
+        })
         self.model = SingleStepDPCModel(**model_config).to(device)
+        
         self.exploration_noise_std = exploration_noise_std
 
     def __call__(
@@ -88,14 +102,19 @@ class DPCPolicy(Policy):
         device = self.device
 
         energy_price = to_torch(
-            #batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
-            batch.energy_price[:, t].reshape((-1, 1))).to(device)
+            batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
 
-        t_torch = (t // self.model.num_intervals) \
+        t_torch = floor(t / self.model.steps_per_window) \
             * torch.ones(bsz, dtype=torch.long).to(device)  # / num_time
 
-        action = self.model(x=x, u=u, t=t_torch,
-                            energy_price=energy_price, zone_temp=zone_temp)
+        if scenario.dr_program.program_type == "PC":
+            pc_limit = scenario.dr_program.power_limit.values[t][0] * torch.ones(bsz, 1)
+        else:
+            pc_limit = torch.zeros_like(energy_price)
+
+        action = self.model(
+            x=x, u=u, t=t_torch, energy_price=energy_price, 
+            zone_temp=zone_temp, pc_limit=pc_limit)
 
         if self.exploration_noise_std is not None and training:
             noise = self.exploration_noise_std \

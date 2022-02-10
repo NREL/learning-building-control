@@ -19,16 +19,15 @@ class CPLRunner(PolicyRunner):
     def run_policy(self, policy):
 
         use_value_function = self.policy_config["use_value_function"]
-        value_interval = self.policy_config["num_value_interval_steps"]
+        num_time_windows = self.policy_config["num_time_windows"]
         num_epochs = self.policy_config["num_epochs"]
         batch_size = self.batch_size
 
         # Initialize the value function tensors
-        num_intervals = self.scenario.num_episode_steps // value_interval + 1
         q = torch.zeros(
-            (5, num_intervals), dtype=torch.float32, requires_grad=True)
+            (5, policy.num_time_windows), dtype=torch.float32, requires_grad=True)
         Q_sqrt = torch.zeros(
-            (5, 5, num_intervals), dtype=torch.float32, requires_grad=True)
+            (5, 5, policy.num_time_windows), dtype=torch.float32, requires_grad=True)
 
         opt = torch.optim.Adam([q, Q_sqrt], lr=self.policy_config["lr"])
 
@@ -126,10 +125,10 @@ if __name__ == "__main__":
         help="learn a value function (1=yes, 0=no)"
     )
     parser.add_argument(
-        "--num-value-interval-steps",
+        "--num-time-windows",
         type=int,
         default=1,
-        help="steps per value function interval"
+        help="number of time windows to use in modeling value function"
     )
     parser.add_argument(
         "--lr",
@@ -157,7 +156,7 @@ if __name__ == "__main__":
             "lr": a.lr,
             "num_epochs": a.num_epochs,
             "use_value_function": a.use_value_function,
-            "num_value_interval_steps": a.num_value_interval_steps,
+            "num_time_windows": a.num_time_windows,
         },
         "training": bool(a.use_value_function),
         "dry_run": a.dry_run,

@@ -1,4 +1,5 @@
 import logging
+from math import ceil, floor
 
 from typing import Tuple
 
@@ -264,8 +265,7 @@ class CPLPolicy(Policy):
         wrap_horizon: bool = True,
         use_value_function: bool = True,
         value_scale: float = 1.0,
-        # number of intervals for value function
-        num_value_interval_steps: float = 12,
+        num_time_windows: int = 24,
         solver_args: dict = {},
         device: str = "cpu",
         **kwargs
@@ -279,7 +279,8 @@ class CPLPolicy(Policy):
         self.lookahead = lookahead
         self.use_value_function = use_value_function
         self.value_scale = value_scale
-        self.num_value_interval_steps = num_value_interval_steps
+        self.num_time_windows = num_time_windows
+        self.steps_per_window = ceil(scenario.num_episode_steps / num_time_windows)
         self.solver_args = solver_args
 
         self.cpl = CPLModel(
@@ -311,8 +312,8 @@ class CPLPolicy(Policy):
         if self.wrap_horizon:
             # If wrapping, use the full lookahead and wrap indices into
             # exogenous data
-            wrapped_index = [x %
-                             total_rows for x in range(t, t + self.lookahead)]
+            wrapped_index = [
+                x % total_rows for x in range(t, t + self.lookahead)]
         else:
             # Otherwise, shorten the lookahead to end with the data
             T = min(self.lookahead, total_rows - t)
@@ -356,7 +357,7 @@ class CPLPolicy(Policy):
 
         # TODO: Get the math right here
         if self.use_value_function:
-            q_idx = t // self.num_value_interval_steps
+            q_idx = floor(t / self.steps_per_window)
             args += [q[:, q_idx].to(device), Q_sqrt[:, :, q_idx].to(device)]
 
         action = self.cpl.problem(

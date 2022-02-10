@@ -14,7 +14,7 @@ def make_configs(dr, batch_size, lookahead=None):
             "policy_config": {
                 "model_config": {
                     "hidden_dim": 128,
-                    "num_intervals": 48
+                    "num_time_windows": 24
                 },
                 "lr": 1e-2,
                 "num_epochs": 1000,
@@ -42,6 +42,36 @@ def make_configs(dr, batch_size, lookahead=None):
             "scenario_config": SCENARIO_DEFAULT,
             "policy_config": {"num_lookahead_steps": lookahead},
             "training": False,
+            "dry_run": 0,
+            "results_dir": results_dir
+        },
+        "RLC": {
+            "name": f"RLC-{dr}-test",
+            "policy_type": "RLC",
+            "dr_program": dr,
+            "batch_size": batch_size,
+            "scenario_config": SCENARIO_DEFAULT,
+            "policy_config": {
+                "node_ip_address": None
+            },
+            "training": False,
+            "dry_run": 0,
+            "results_dir": results_dir
+        },
+        "CPL": {
+            "name": f"CPL-{dr}-test",
+            "policy_type": "CPL",
+            "batch_size": batch_size,
+            "dr_program": dr,
+            "scenario_config": SCENARIO_DEFAULT,
+            "policy_config": {
+                "lookahead": lookahead,
+                "lr": 10,
+                "num_epochs": 50,
+                "use_value_function": 0,
+                "num_time_windows": 24,
+            },
+            "training": True,
             "dry_run": 0,
             "results_dir": results_dir
         }

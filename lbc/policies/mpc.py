@@ -263,7 +263,7 @@ class MPC:
             m.power_viol_cons = pyo.Constraint(
                 m.time,
                 rule=lambda m, t: m.p_consumed[t] - m.power_viol[t]
-                <= self.dr_program.power_limit.values[t][0])
+                <= self.dr_program.power_limit.values[wrapped_index[t]][0])
 
         delta_t = self.zone_model['delta_t']
 
