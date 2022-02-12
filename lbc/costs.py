@@ -52,7 +52,7 @@ def stage_cost(
 
     # Chiller power
     chiller_power = (hvac_cop * clipped_action[:, :-1].sum(axis=-1)
-                     * F.relu(temp_oa.squeeze() - action[:, -1]))
+                     * F.relu(temp_oa.squeeze() - clipped_action[:, -1]))
 
     # Total power and power cost
     total_power = fan_power + chiller_power

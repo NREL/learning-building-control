@@ -23,7 +23,7 @@ class SingleStepDPCModel(nn.Module):
         num_time_windows: int,
         num_episode_steps: int,
         hidden_dim: int = 64,
-        embed_dim: int = 32,
+        embed_dim: int = 128,
         **kwargs
     ):
 

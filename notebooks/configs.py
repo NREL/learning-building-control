@@ -19,7 +19,6 @@ def make_configs(dr, batch_size, lookahead=None):
                 "lr": 1e-2,
                 "num_epochs": 1000,
             },
-            "training": True,
             "dry_run": 0,
             "results_dir": results_dir
         },
@@ -30,7 +29,6 @@ def make_configs(dr, batch_size, lookahead=None):
             "batch_size": batch_size,
             "scenario_config": SCENARIO_DEFAULT,
             "policy_config": {"tee": False},
-            "training": False,
             "dry_run": 0,
             "results_dir": results_dir
         },
@@ -41,7 +39,6 @@ def make_configs(dr, batch_size, lookahead=None):
             "dr_program": dr,
             "scenario_config": SCENARIO_DEFAULT,
             "policy_config": {"num_lookahead_steps": lookahead, "tee": False},
-            "training": False,
             "dry_run": 0,
             "results_dir": results_dir
         },
@@ -54,7 +51,6 @@ def make_configs(dr, batch_size, lookahead=None):
             "policy_config": {
                 "node_ip_address": None
             },
-            "training": False,
             "dry_run": 0,
             "results_dir": results_dir
         },
@@ -71,7 +67,6 @@ def make_configs(dr, batch_size, lookahead=None):
                 "use_value_function": 0,
                 "num_time_windows": 24,
             },
-            "training": True,
             "dry_run": 0,
             "results_dir": results_dir
         }

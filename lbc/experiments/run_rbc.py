@@ -17,9 +17,10 @@ SETPOINTS = {
 
 
 class RBCRunner(PolicyRunner):
-    def run_policy(self, policy):
+    def run_policy(self):
         loss, rollout, meta = simulate(
-            policy=policy, scenario=self.scenario, batch_size=self.batch_size)
+            policy=self.policy, scenario=self.scenario, batch_size=self.batch_size,
+            training=False)
         return loss, rollout, meta
 
 

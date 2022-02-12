@@ -210,7 +210,7 @@ class Scenario:
         # Create a list of batch dates, optionally shuffled.
         if shuffle:
             random.shuffle(_dates)
-        _dates = _dates[:batch_size]
+        _dates = _dates[:batch_size].copy()
 
         # Create a list of tuples of start and end timestamps.
         start_times = [f"{d} {self.start_time}" for d in _dates]

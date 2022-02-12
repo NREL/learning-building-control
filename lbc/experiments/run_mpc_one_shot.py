@@ -9,9 +9,11 @@ logger = logging.getLogger(__file__)
 
 
 class MPCOneShotRunner(PolicyRunner):
-    def run_policy(self, policy):
+    def run_policy(self):
+        # Run the policy on the evaluation set
         loss, rollout, meta = simulate(
-            policy=policy, scenario=self.scenario, batch_size=self.batch_size)
+            policy=self.policy, scenario=self.scenario, 
+            batch_size=self.batch_size, training=False)
         return loss, rollout, meta
 
 
@@ -39,7 +41,6 @@ if __name__ == "__main__":
         "batch_size": a.batch_size,
         "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
         "policy_config": {"tee": a.tee},
-        "training": False,
         "dry_run": a.dry_run,
         "results_dir": a.results_dir
     }

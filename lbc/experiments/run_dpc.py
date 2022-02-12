@@ -16,7 +16,9 @@ logger = logging.getLogger(__file__)
 
 class DPCRunner(PolicyRunner):
 
-    def run_policy(self, policy):
+    def train_policy(self):
+
+        policy = self.policy
 
         opt = torch.optim.Adam(
             policy.model.parameters(), lr=self.policy_config["lr"])
@@ -25,19 +27,17 @@ class DPCRunner(PolicyRunner):
         #     opt, factor=0.5, patience=10, cooldown=10)
         # scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=500, gamma=np.sqrt(.1))
 
-        best_test_loss = np.inf
-        best_model = None
         losses = []
         test_losses = []
         pbar = tqdm(range(self.policy_config["num_epochs"]))
-
         for _ in pbar:
             try:
                 # Simulate on the training set and perform gradient update
-                total_loss, _, _ = simulate(
-                    policy=policy, scenario=self.scenario,
-                    batch_size=self.batch_size)
-                loss = total_loss.mean()
+                loss, rollout, meta = simulate(
+                    policy=policy, scenario=self.scenario, batch_size=self.batch_size,
+                    training=True)
+
+                loss = loss.mean()
 
                 # Normalize the loss function by number steps so we can
                 # stably handle different episode lengths with the same lr.
@@ -48,38 +48,37 @@ class DPCRunner(PolicyRunner):
                 opt_loss.backward()
                 opt.step()
 
-                # Evaluate on the test set
-                test_total_loss, test_rollout, meta = simulate(
-                    policy=policy, scenario=self.scenario, batch_size=31,
+                # # Evaluate on the test set for monitoring
+                test_loss, _, _ = simulate(
+                    policy=policy, scenario=self.scenario, batch_size=self.batch_size,
                     training=False)
-                test_loss = test_total_loss.mean()
-                
-                # scheduler.step()
+                test_loss = test_loss.mean()
 
                 # Track the training and test losses.
                 losses.append(loss.detach().numpy())
-                test_losses.append(test_loss)
-
-                if test_losses[-1] < best_test_loss:
-                    best_test_loss = test_losses[-1]
-                    best_model = deepcopy(policy.model)
+                test_losses.append(test_loss.detach().numpy())
 
                 pbar.set_description(
                     f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},")
-                    #+ f" {scheduler._last_lr[0]:1.3e}")
                     
             except KeyboardInterrupt:
                 logger.info("stopped")
                 break
 
         meta.update({
-            "best_test_loss": best_test_loss,
-            "best_model": best_model,
+            "model": deepcopy(policy.model),
             "losses": losses,
             "test_losses": test_losses
         })
 
-        return best_test_loss, test_rollout, meta
+        return loss, rollout, meta
+
+
+    def run_policy(self):
+        loss, rollout, meta = simulate(
+            policy=self.policy, scenario=self.scenario, batch_size=self.batch_size,
+            training=False)
+        return loss, rollout, meta
 
 
 def main(**kwargs):
@@ -139,7 +138,6 @@ if __name__ == "__main__":
             "lr": a.lr,
             "num_epochs": a.num_epochs,
         },
-        "training": True,
         "dry_run": a.dry_run,
         "results_dir": a.results_dir
     }

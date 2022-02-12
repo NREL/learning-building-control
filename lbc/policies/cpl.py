@@ -296,14 +296,13 @@ class CPLPolicy(Policy):
     def __call__(
         self,
         batch: Batch,           # current batch of scenario data
-        q: torch.tensor,        # q-vector
-        Q_sqrt: torch.tensor,   # Q_sqrt tensor
         t: int,                 # current time index
         x: any,                 # current state
         zone_temp: any,         # current zone temperatures
         action_init: any,       # initial action
+        q: torch.tensor = None,        # q-vector
+        Q_sqrt: torch.tensor = None,   # Q_sqrt tensor
         device: str = "cpu",
-        training: bool = True,
         **kwargs
     ) -> Tuple[torch.tensor, dict]:
 

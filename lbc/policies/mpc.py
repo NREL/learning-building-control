@@ -38,6 +38,7 @@ class MPC:
         wrap_horizon: bool = False,
         solver: str = "ipopt",
         energy_price: np.ndarray = None,
+        action_sequence: np.ndarray = None,
         **kwargs
     ):
 
@@ -55,6 +56,7 @@ class MPC:
         self.solver = solver
         self.wrap_horizon = wrap_horizon
         self.energy_price = energy_price
+        self.action_sequence = action_sequence
 
         if linearize is True and action_init is None:
             raise ValueError("Using linearized model requires initial"
@@ -75,6 +77,7 @@ class MPC:
         self.zone_neighbors = self.zone_model["u_neighbor"]
 
         self.mpc = self.create_model()
+
 
     def create_model(self) -> pyo.ConcreteModel:
 
@@ -256,6 +259,13 @@ class MPC:
                     zm["mean_output"][z]
         m.zone_temp_cons = pyo.Constraint(m.time, m.zone, rule=zone_temp_rule)
 
+        # Optionally fix the actions to verify cost functions
+        if self.action_sequence is not None:
+            m.fixed_action_cons = pyo.Constraint(
+                m.time, m.control,
+                rule=lambda m, t, z: 
+                    m.action[t, z] == self.action_sequence[t, z])
+
         if self.dr_program.program_type == 'PC':
             m.power_viol = pyo.Var(m.time, domain=pyo.NonNegativeReals)
             m.power_viol_cons = pyo.Constraint(
@@ -358,8 +368,11 @@ class MPCPolicy(Policy):
         self.solver = solver
         self.tee = tee
 
+        self.action_sequence = kwargs.get("action_sequence")
+
         self.cached_actions = None
         self.cached_dfs = []
+
 
     def __call__(
         self,
@@ -427,6 +440,10 @@ class MPCPolicy(Policy):
                 energy_price = batch_energy_price[b, :].squeeze()
 
                 # Create the MPC model instance.
+                action_sequence = None
+                if self.action_sequence is not None:
+                    action_sequence = self.action_sequence[:, b, :]
+
                 mpc = MPC(
                     zone_model=scenario.zone_model,
                     scenario=scenario, 
@@ -439,7 +456,8 @@ class MPCPolicy(Policy):
                     action_init=_action_init,
                     linearize=self.linearize,
                     solver=self.solver,
-                    energy_price=energy_price)
+                    energy_price=energy_price,
+                    action_sequence=action_sequence)
 
                 # Solve the MPC problem and extract the first action.
                 df = mpc.solve(tee=self.tee)
@@ -481,7 +499,9 @@ class MPCOneShotPolicy(Policy):
 
         self.linearize = linearize
         self.mpc = MPCPolicy(
-            linearize=linearize, one_shot=True, solver=solver, tee=tee)
+            linearize=linearize, one_shot=True, solver=solver, tee=tee,
+            **kwargs)
+
 
     def __call__(self, *args, **kwargs) -> Tuple[torch.tensor, dict]:
 

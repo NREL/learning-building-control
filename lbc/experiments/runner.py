@@ -54,9 +54,9 @@ class PolicyRunner:
         batch_size: int = None,
         scenario_config: dict = None,
         policy_config: dict = None,
-        training: bool = None,
         dry_run: bool = None,
         results_dir: str = None,
+        **kwargs
     ):
 
         assert policy_type in POLICY_MAP, f"invalid policy {policy_type}"
@@ -64,7 +64,6 @@ class PolicyRunner:
         self.name = name
         self.policy_type = policy_type
         self.dr_program = dr_program
-        self.training = training
         self.dry_run = dry_run
         self.results_dir = results_dir if results_dir is not None else DEFAULT_RESULTS_DIR
 
@@ -73,28 +72,34 @@ class PolicyRunner:
         self.scenario = Scenario(**scenario_config)
 
         # Get the actual batch size
-        _batch = self.scenario.make_batch(batch_size, training=training)
+        _batch = self.scenario.make_batch(batch_size)
         self.batch_size = _batch.q_solar.shape[0]
 
         # Create a one-off policy config that can be used in the constructor.
         self.policy_config = policy_config
 
+        # Instantiate the policy
+        policy_cls = POLICY_MAP[self.policy_type]
+        self.policy = policy_cls(scenario=self.scenario, **self.policy_config)
+
 
     @classmethod
-    def run_policy(self, policy: Policy) -> Tuple[any, any, any]:
+    def run_policy(self) -> Tuple[any, any, any]:
         """Do something here and return these values to save."""
         # return loss, rollout, meta
         pass
 
 
+    @classmethod
+    def train_policy(self):
+        raise NotImplementedError
+
+
     def run(self):
-        # Instantiate the policy
-        policy_cls = POLICY_MAP[self.policy_type]
-        policy = policy_cls(scenario=self.scenario, **self.policy_config)
 
         # Run the policy
         tic = time.time()
-        loss, rollout, meta = self.run_policy(policy)
+        loss, rollout, meta = self.run_policy()
         cpu_time = time.time() - tic
 
         # Save the results

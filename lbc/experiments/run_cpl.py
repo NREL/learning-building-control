@@ -16,11 +16,13 @@ logger = logging.getLogger(__name__)
 
 class CPLRunner(PolicyRunner):
 
-    def run_policy(self, policy):
+    def train_policy(self):
+
+        policy = self.policy
 
         use_value_function = self.policy_config["use_value_function"]
-        num_time_windows = self.policy_config["num_time_windows"]
         num_epochs = self.policy_config["num_epochs"]
+        num_episode_steps = self.scenario.num_episode_steps
         batch_size = self.batch_size
 
         # Initialize the value function tensors
@@ -31,15 +33,11 @@ class CPLRunner(PolicyRunner):
 
         opt = torch.optim.Adam([q, Q_sqrt], lr=self.policy_config["lr"])
 
-        scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.1)
-
         # If not learning the value function, we'll just run once against the
         # test set.
         num_epochs = num_epochs if use_value_function else 1
 
         # Main loop
-        best_test_loss = np.inf
-        best_model = None
         losses = []
         test_losses = []
         pbar = tqdm(range(num_epochs))
@@ -47,60 +45,53 @@ class CPLRunner(PolicyRunner):
 
             try:
 
-                if use_value_function:
-                    # If learning the value function, run simulation and do
-                    # gradient update
-                    total_loss, _, _ = simulate(
-                        policy=policy, scenario=self.scenario,
-                        batch_size=self.batch_size, q=q, Q_sqrt=Q_sqrt)
+                # If learning the value function, run simulation and do
+                # gradient update
+                loss, rollout, meta = simulate(
+                    policy=policy, scenario=self.scenario, batch_size=self.batch_size, 
+                    training=True, q=q, Q_sqrt=Q_sqrt)
 
-                    loss = total_loss.mean()
+                # Take mean and normalize
+                loss = loss.mean()
+                opt_loss = loss / num_episode_steps
 
-                    opt.zero_grad()
-                    loss.backward()
-                    opt.step()
-
-                    losses.append(loss.detach().numpy())
-
-                else:
-                    logger.info(
-                        "With use_value_function=False we only run one epoch"
-                        + " against the test set. Training loss will be nan"
-                        + " here (expected)."
-                    )
-                    total_loss = None
-                    losses.append(np.nan)
+                # Gradient step
+                opt.zero_grad()
+                opt_loss.backward()
+                opt.step()
 
                 # Evaluate on the test set
-                test_total_loss, test_rollout, meta = simulate(
-                    policy=policy, scenario=self.scenario,
-                    batch_size=min(batch_size, 31),
+                test_loss, _, _ = simulate(
+                    policy=policy, scenario=self.scenario, batch_size=batch_size,
                     training=False, q=q, Q_sqrt=Q_sqrt)
-                test_loss = test_total_loss.mean()
+                test_loss = test_loss.mean()
+
+                # Update loss traces
+                losses.append(loss.detach().numpy())
                 test_losses.append(test_loss.detach().numpy())
 
-                scheduler.step()
-
-                if test_losses[-1] < best_test_loss:
-                    best_test_loss = test_losses[-1]
-                    best_model = [q.clone().detach(), Q_sqrt.clone().detach()]
-
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}" \
-                    + f" {scheduler._last_lr[0]:1.3e}")
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}")
 
             except KeyboardInterrupt:
                 logger.info("stopped")
                 break
 
         meta.update({
-            "best_test_loss": best_test_loss,
-            "best_model": best_model,
+            "model": [q.clone().detach(), Q_sqrt.clone().detach()],
             "losses": losses,
             "test_losses": test_losses
         })
 
-        return best_test_loss, test_rollout, meta
+        return loss, rollout, meta
+
+
+    def run_policy(self):
+        policy = self.policy
+        loss, rollout, meta = simulate(
+            policy=policy, scenario=self.scenario, batch_size=self.batch_size,
+            training=False)
+        return loss, rollout, meta
 
 
 def main(**kwargs):
@@ -158,7 +149,6 @@ if __name__ == "__main__":
             "use_value_function": a.use_value_function,
             "num_time_windows": a.num_time_windows,
         },
-        "training": bool(a.use_value_function),
         "dry_run": a.dry_run,
         "results_dir": a.results_dir
     }

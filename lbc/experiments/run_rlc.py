@@ -12,7 +12,8 @@ class RLCRunner(PolicyRunner):
 
     def run_policy(self, policy):
         loss, rollout, meta = simulate(
-            policy=policy, scenario=self.scenario, batch_size=self.batch_size)
+            policy=self.policy, scenario=self.scenario, batch_size=self.batch_size,
+            trainig=False)
         return loss, rollout, meta
 
 
