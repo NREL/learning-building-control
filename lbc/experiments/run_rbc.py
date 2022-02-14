@@ -9,17 +9,22 @@ logger = logging.getLogger(__file__)
 
 class RBCRunner(PolicyRunner):
 
+
     @property
     def name(self):
         pf = self.policy_config["p_flow"]
         pt = self.policy_config["p_temp"]
         return f"RBC-{self.dr_program}-{pf:1.3f}-{pt:1.3f}"
 
+
     def run_policy(self, batch_size=None, training=False):
+
         batch_size = batch_size if batch_size is not None else self.batch_size
+        
         loss, rollout, meta = simulate(
             policy=self.policy, scenario=self.scenario, batch_size=batch_size,
             training=training)
+        
         return loss, rollout, meta
 
 

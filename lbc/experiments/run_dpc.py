@@ -96,7 +96,8 @@ class DPCRunner(PolicyRunner):
 
 def main(**kwargs):
     runner = DPCRunner(**kwargs)
-    runner.run()
+    _ = runner.train_policy()
+    _ = runner.run()
 
 
 if __name__ == "__main__":
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     config["policy_config"] = {
         "model_config": {
             "hidden_dim": a.hidden_dim,
-            "num_time_windows": a.num
+            "num_time_windows": a.num_time_windows
         },
         "lr": a.lr,
         "num_epochs": a.num_epochs,

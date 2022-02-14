@@ -14,10 +14,13 @@ class RLCRunner(PolicyRunner):
         return f"RLC-{self.dr_program}"
 
     def run_policy(self, batch_size=None, training=False):
+
         batch_size = batch_size if batch_size is not None else self.batch_size
+
         loss, rollout, meta = simulate(
             policy=self.policy, scenario=self.scenario, batch_size=batch_size,
             training=training)
+
         return loss, rollout, meta
 
 

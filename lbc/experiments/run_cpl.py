@@ -103,16 +103,27 @@ class CPLRunner(PolicyRunner):
 
 
     def run_policy(self, batch_size=None, training=False):
+
         batch_size = batch_size if batch_size is not None else self.batch_size
+        
         loss, rollout, meta = simulate(
             policy=self.policy, scenario=self.scenario, batch_size=batch_size,
             training=training, q=self.q, Q_sqrt=self.Q_sqrt)
+        
         return loss, rollout, meta
 
 
 def main(**kwargs):
+    
     runner = CPLRunner(**kwargs)
-    runner.run()
+    
+    policy_config = kwargs.get("policy_config", {})
+    if "use_value_function" in policy_config and policy_config["use_value_function"] == 1:
+        logger.info("starting training run")
+        _ = runner.train_policy()
+
+    logger.info("evaluating policy")
+    _ = runner.run()
 
 
 if __name__ == "__main__":
@@ -136,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-time-windows",
         type=int,
-        default=1,
+        default=24,
         help="number of time windows to use in modeling value function"
     )
     parser.add_argument(
@@ -154,7 +165,6 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     config = get_config("CPL", **vars(a))
-    config["name"] = f"CPL-{a.dr_program}-{a.lookahead}-{a.use_value_function}",
     config["policy_config"] = {
         "lookahead": a.lookahead,
         "lr": a.lr,

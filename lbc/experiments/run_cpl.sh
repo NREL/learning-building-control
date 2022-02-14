@@ -10,5 +10,5 @@ set -x
 source env.sh
 
 python run_cpl.py --bsz $BATCH_SIZE --dr=$DR_PROGRAM \
-    --lookahead $1 --num-epochs 50 --use-value-function $2 --lr 10 \
+    --lookahead $1 --num-epochs 50 --use-value-function $2 --lr 1 \
     --results-dir $RESDIR
