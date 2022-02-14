@@ -26,7 +26,6 @@ COMMON = {
     "batch_size": 31,
     "dr_program": DR_PROGRAM,
     "scenario_config": SCENARIO_DEFAULT,
-    "dry_run": 0,
     "results_dir": DEFAULT_RESULTS_DIR
 }
 

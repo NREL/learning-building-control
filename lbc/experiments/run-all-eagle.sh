@@ -5,7 +5,6 @@ set -xe
 
 # Shared settings
 export DR_PROGRAM=PC
-export DRY_RUN=0
 export BATCH_SIZE=31
 
 # Results dir, export so scripts have it

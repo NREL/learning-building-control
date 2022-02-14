@@ -1,4 +1,5 @@
 import logging
+import time
 
 from tqdm import tqdm
 
@@ -24,11 +25,13 @@ class CPLRunner(PolicyRunner):
         self.Q_sqrt = torch.zeros(
             (5, 5, self.policy.num_time_windows), dtype=torch.float32, requires_grad=True)
 
+
     @property
     def name(self):
         la = self.policy_config["lookahead"]
         uvf = self.policy_config["use_value_function"]
         return f"CPL-{self.dr_program}-{la}-{uvf}"
+
 
     def train_policy(self):
 
@@ -48,6 +51,7 @@ class CPLRunner(PolicyRunner):
         # Main loop
         losses = []
         test_losses = []
+        tic = time.time()
         pbar = tqdm(range(num_epochs))
         for epoch in pbar:
 
@@ -90,6 +94,10 @@ class CPLRunner(PolicyRunner):
             "losses": losses,
             "test_losses": test_losses
         })
+
+        # Save results
+        cpu_time = time.time() - tic
+        self.save(rollout, meta, loss, cpu_time, name_suffix="train")
 
         return loss, rollout, meta
 

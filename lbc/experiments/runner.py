@@ -38,7 +38,6 @@ class PolicyRunner:
         batch_size: int = None,
         scenario_config: dict = None,
         policy_config: dict = None,
-        dry_run: bool = None,
         results_dir: str = None,
         **kwargs
     ):
@@ -47,7 +46,6 @@ class PolicyRunner:
 
         self.policy_type = policy_type
         self.dr_program = dr_program
-        self.dry_run = dry_run
         self.results_dir = results_dir if results_dir is not None else DEFAULT_RESULTS_DIR
 
         scenario_config["dr_program"] = DemandResponseProgram(dr_program)
@@ -71,6 +69,7 @@ class PolicyRunner:
         self,
         batch_size: int = None,
         training: bool = False,
+        save: bool = True
     ) -> Tuple[any, any, any]:
         """Do something here and return these values to save."""
         # return loss, rollout, meta
@@ -91,7 +90,7 @@ class PolicyRunner:
         self,
         batch_size: int = None,
         training: bool = False,
-        save: bool = True
+        **kwargs
     ) -> Tuple[any, any, any]:
 
         # Run the policy
@@ -101,8 +100,7 @@ class PolicyRunner:
         cpu_time = time.time() - tic
 
         # Save the results
-        if save:
-            self.save(rollout, meta, loss, cpu_time)
+        self.save(rollout, meta, loss, cpu_time)
 
         return loss, rollout, meta
 
@@ -113,6 +111,7 @@ class PolicyRunner:
         meta,
         batched_loss,
         cpu_time,
+        name_suffix = None
     ):
 
         loss = batched_loss.mean().item()
@@ -123,25 +122,24 @@ class PolicyRunner:
         # Make the output directory if it doesn't exist.
         pathlib.Path(self.results_dir).mkdir(parents=True, exist_ok=True) 
 
-        if self.dry_run == 0:
-            filename = os.path.join(self.results_dir, self.name + ".p")
-            with open(filename, "wb") as f:
-                pickle.dump(
-                    {
-                        "name": self.name,
-                        "scenario_config": self.scenario_config,
-                        "batch_size": self.batch_size,
-                        "meta": meta,
-                        "rollout": rollout,
-                        "cpu_time": cpu_time,
-                        "batched_loss": batched_loss,
-                        "mean_loss": loss,
-                        "policy_config": self.policy_config
-                    }, f
-                )
-            logger.info(f"saved to {filename}")
-        else:
-            logger.info("dry_run, skipped saving output")
+        # Save the output
+        name = self.name if name_suffix is None else self.name + "-" + name_suffix
+        filename = os.path.join(self.results_dir, name + ".p")
+        with open(filename, "wb") as f:
+            pickle.dump(
+                {
+                    "name": self.name,
+                    "scenario_config": self.scenario_config,
+                    "batch_size": self.batch_size,
+                    "meta": meta,
+                    "rollout": rollout,
+                    "cpu_time": cpu_time,
+                    "batched_loss": batched_loss,
+                    "loss": loss,
+                    "policy_config": self.policy_config
+                }, f
+            )
+        logger.info(f"saved to {filename}")
 
 
 def get_parser():
@@ -170,6 +168,6 @@ def get_parser():
         "--dry-run",
         type=int,
         default=0,
-        help="0=save, 1=no save"
+        help="0=full scenario, 1=short scenairo"
     )
     return parser

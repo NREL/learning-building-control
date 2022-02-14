@@ -9,7 +9,6 @@ logger = logging.getLogger(__file__)
 
 class MPCRunner(PolicyRunner):
 
-
     @property
     def name(self):
         la = self.policy_config["num_lookahead_steps"]

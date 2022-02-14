@@ -10,5 +10,5 @@ set -x
 source env.sh
 
 python run_mpc_one_shot.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
-    --dry-run $DRY_RUN --results-dir $RESDIR
+    --results-dir $RESDIR
 

@@ -9,6 +9,6 @@ set -x
 
 source env.sh
 
-python run_rbc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM --dry-run $DRY_RUN \
+python run_rbc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
   --results-dir $RESDIR
 

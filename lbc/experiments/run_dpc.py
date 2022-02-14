@@ -1,5 +1,6 @@
 from copy import deepcopy
 import logging
+import time
 
 from tqdm import tqdm
 
@@ -19,7 +20,7 @@ class DPCRunner(PolicyRunner):
     def name(self):
         return f"DPC-{self.dr_program}"
 
-    def train_policy(self):
+    def train_policy(self, **kwargs):
 
         policy = self.policy
 
@@ -32,6 +33,7 @@ class DPCRunner(PolicyRunner):
 
         losses = []
         test_losses = []
+        tic = time.time()
         pbar = tqdm(range(self.policy_config["num_epochs"]))
         for _ in pbar:
             try:
@@ -74,14 +76,21 @@ class DPCRunner(PolicyRunner):
             "test_losses": test_losses
         })
 
+        # Save results
+        cpu_time = time.time() - tic
+        self.save(rollout, meta, loss, cpu_time, name_suffix="train")
+
         return loss, rollout, meta
 
 
     def run_policy(self, batch_size=None, training=False):
+        
         batch_size = batch_size if batch_size is not None else self.batch_size
+        
         loss, rollout, meta = simulate(
             policy=self.policy, scenario=self.scenario, batch_size=batch_size,
             training=training)
+        
         return loss, rollout, meta
 
 

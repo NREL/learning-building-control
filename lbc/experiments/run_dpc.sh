@@ -9,6 +9,6 @@ set -x
 
 source env.sh
 
-python run_dpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM --dry-run $DRY_RUN \
+python run_dpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
     --num-epochs 2000 --results-dir $RESDIR
 
