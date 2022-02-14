@@ -322,10 +322,8 @@ class CPLPolicy(Policy):
         temp_oa = batch.temp_oa[:, wrapped_index].unsqueeze(axis=-1).to(device)
         q_solar = batch.q_solar[:, wrapped_index, :].to(device)
 
-        comfort_min = batch.comfort_min[:,
-                                        wrapped_index].unsqueeze(-1).to(device)
-        comfort_max = batch.comfort_max[:,
-                                        wrapped_index].unsqueeze(-1).to(device)
+        comfort_min = batch.comfort_min[:, wrapped_index].unsqueeze(-1).to(device)
+        comfort_max = batch.comfort_max[:, wrapped_index].unsqueeze(-1).to(device)
 
         # I keep the term "tou", but it means electricity price in general.
         batch_predicted_price = batch.predicted_energy_price[:, wrapped_index]

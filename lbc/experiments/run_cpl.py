@@ -1,13 +1,10 @@
 import logging
 
-import numpy as np
-
 from tqdm import tqdm
 
 import torch
 
-from lbc.experiments.runner import PolicyRunner, SCENARIO_DEFAULT
-from lbc.experiments.runner import SCENARIO_TEST
+from lbc.experiments.runner import PolicyRunner
 from lbc.simulate import simulate
 
 
@@ -16,22 +13,33 @@ logger = logging.getLogger(__name__)
 
 class CPLRunner(PolicyRunner):
 
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        # Initialize the value function tensors
+        self.q = torch.zeros(
+            (5, self.policy.num_time_windows), dtype=torch.float32, requires_grad=True)
+        self.Q_sqrt = torch.zeros(
+            (5, 5, self.policy.num_time_windows), dtype=torch.float32, requires_grad=True)
+
+    @property
+    def name(self):
+        la = self.policy_config["lookahead"]
+        uvf = self.policy_config["use_value_function"]
+        return f"CPL-{self.dr_program}-{la}-{uvf}"
+
     def train_policy(self):
 
+        # Convenient references
         policy = self.policy
-
         use_value_function = self.policy_config["use_value_function"]
         num_epochs = self.policy_config["num_epochs"]
         num_episode_steps = self.scenario.num_episode_steps
         batch_size = self.batch_size
 
-        # Initialize the value function tensors
-        q = torch.zeros(
-            (5, policy.num_time_windows), dtype=torch.float32, requires_grad=True)
-        Q_sqrt = torch.zeros(
-            (5, 5, policy.num_time_windows), dtype=torch.float32, requires_grad=True)
-
-        opt = torch.optim.Adam([q, Q_sqrt], lr=self.policy_config["lr"])
+        opt = torch.optim.Adam([self.q, self.Q_sqrt], lr=self.policy_config["lr"])
 
         # If not learning the value function, we'll just run once against the
         # test set.
@@ -49,7 +57,7 @@ class CPLRunner(PolicyRunner):
                 # gradient update
                 loss, rollout, meta = simulate(
                     policy=policy, scenario=self.scenario, batch_size=self.batch_size, 
-                    training=True, q=q, Q_sqrt=Q_sqrt)
+                    training=True, q=self.q, Q_sqrt=self.Q_sqrt)
 
                 # Take mean and normalize
                 loss = loss.mean()
@@ -63,7 +71,7 @@ class CPLRunner(PolicyRunner):
                 # Evaluate on the test set
                 test_loss, _, _ = simulate(
                     policy=policy, scenario=self.scenario, batch_size=batch_size,
-                    training=False, q=q, Q_sqrt=Q_sqrt)
+                    training=False, q=self.q, Q_sqrt=self.Q_sqrt)
                 test_loss = test_loss.mean()
 
                 # Update loss traces
@@ -78,7 +86,7 @@ class CPLRunner(PolicyRunner):
                 break
 
         meta.update({
-            "model": [q.clone().detach(), Q_sqrt.clone().detach()],
+            "model": [self.q.clone().detach(), self.Q_sqrt.clone().detach()],
             "losses": losses,
             "test_losses": test_losses
         })
@@ -86,11 +94,11 @@ class CPLRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-    def run_policy(self):
-        policy = self.policy
+    def run_policy(self, batch_size=None, training=False):
+        batch_size = batch_size if batch_size is not None else self.batch_size
         loss, rollout, meta = simulate(
-            policy=policy, scenario=self.scenario, batch_size=self.batch_size,
-            training=False)
+            policy=self.policy, scenario=self.scenario, batch_size=batch_size,
+            training=training, q=self.q, Q_sqrt=self.Q_sqrt)
         return loss, rollout, meta
 
 
@@ -101,8 +109,10 @@ def main(**kwargs):
 
 if __name__ == "__main__":
 
-    from lbc.experiments.runner import parser
+    from lbc.experiments.runner import get_parser
+    from lbc.experiments.config import get_config
 
+    parser = get_parser()
     parser.add_argument(
         "--lookahead",
         type=int,
@@ -135,23 +145,16 @@ if __name__ == "__main__":
     )
     a = parser.parse_args()
 
-    # Use the args to construct a full configuration for the experiment.
-    config = {
-        "name": f"CPL-{a.dr_program}-{a.lookahead}-q={a.use_value_function}",
-        "policy_type": "CPL",
-        "batch_size": a.batch_size,
-        "dr_program": a.dr_program,
-        "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {
-            "lookahead": a.lookahead,
-            "lr": a.lr,
-            "num_epochs": a.num_epochs,
-            "use_value_function": a.use_value_function,
-            "num_time_windows": a.num_time_windows,
-        },
-        "dry_run": a.dry_run,
-        "results_dir": a.results_dir
+    config = get_config("CPL", **vars(a))
+    config["name"] = f"CPL-{a.dr_program}-{a.lookahead}-{a.use_value_function}",
+    config["policy_config"] = {
+        "lookahead": a.lookahead,
+        "lr": a.lr,
+        "num_epochs": a.num_epochs,
+        "use_value_function": a.use_value_function,
+        "num_time_windows": a.num_time_windows,
     }
-    print("ARGS:", config)
 
+    print("ARGS:", config)
+    
     _ = main(**config)

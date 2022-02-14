@@ -1,7 +1,6 @@
 import logging
 
-from lbc.experiments.runner import PolicyRunner, SCENARIO_DEFAULT
-from lbc.experiments.runner import SCENARIO_TEST
+from lbc.experiments.runner import PolicyRunner
 from lbc.simulate import simulate
 
 
@@ -9,11 +8,16 @@ logger = logging.getLogger(__file__)
 
 
 class MPCOneShotRunner(PolicyRunner):
-    def run_policy(self):
-        # Run the policy on the evaluation set
+
+    @property
+    def name(self):
+        return f"MPCOneShot-{self.dr_program}"
+        
+    def run_policy(self, batch_size=None, training=False):
+        batch_size = batch_size if batch_size is not None else self.batch_size
         loss, rollout, meta = simulate(
-            policy=self.policy, scenario=self.scenario, 
-            batch_size=self.batch_size, training=False)
+            policy=self.policy, scenario=self.scenario, batch_size=batch_size,
+            training=training)
         return loss, rollout, meta
 
 
@@ -24,9 +28,11 @@ def main(**kwargs):
 
 if __name__ == "__main__":
 
-    from lbc.experiments.runner import parser
+    from lbc.experiments.runner import get_parser
+    from lbc.experiments.config import get_config
 
-    parser.add_arugment(
+    parser = get_parser()
+    parser.add_argument(
         "--tee",
         action="store_true",
         help="turn on solver logging"
@@ -34,16 +40,8 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     # Use the args to construct a full configuration for the experiment.
-    config = {
-        "name": f"MPCOneShot-{a.dr_program}",
-        "policy_type": "MPCOneShot",
-        "dr_program": a.dr_program,
-        "batch_size": a.batch_size,
-        "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {"tee": a.tee},
-        "dry_run": a.dry_run,
-        "results_dir": a.results_dir
-    }
-    print("ARGS:", config)
+    config = get_config("MPCOneShot", **vars(a))
+    config["policy_config"]["tee"] = a.tee
+    print("CONFIG:", config)
 
     _ = main(**config)

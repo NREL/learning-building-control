@@ -11,11 +11,13 @@ logging.basicConfig(level="INFO")
 logger = logging.getLogger(__file__)
 
 
-def main(dr):
+def main(dr, results_dir=None):
 
-    dirname = f"results-{dr}"
-    print(dirname)
-    files = glob.glob(os.path.join(dirname, "*.p"))
+    results_dir = results_dir if results_dir is not None else f"results-{dr}"
+    
+    files = glob.glob(os.path.join(results_dir, f"*-{dr}*.p"))
+    assert len(files) > 0, "no files found!"
+
     files = sorted(files)
     logger.info(f" Found {len(files)} files: {files}")
 
@@ -48,8 +50,13 @@ if __name__ == "__main__":
         type=str,
         help="DR program",
         choices=["TOU", "RTP", "PC"])
+    parser.add_argument(
+        "--results-dir",
+        type=str,
+        help="directory containing result pickles",
+        default=None
+    )
     a = parser.parse_args()
 
-    _ = main(a.dr)
-
+    _ = main(a.dr, a.results_dir)
 

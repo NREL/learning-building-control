@@ -1,13 +1,11 @@
 from copy import deepcopy
 import logging
 
-import numpy as np
 from tqdm import tqdm
 
 import torch
 
-from lbc.experiments.runner import PolicyRunner, SCENARIO_DEFAULT
-from lbc.experiments.runner import SCENARIO_TEST
+from lbc.experiments.runner import PolicyRunner
 from lbc.simulate import simulate
 
 
@@ -15,6 +13,11 @@ logger = logging.getLogger(__file__)
 
 
 class DPCRunner(PolicyRunner):
+
+
+    @property
+    def name(self):
+        return f"DPC-{self.dr_program}"
 
     def train_policy(self):
 
@@ -74,10 +77,11 @@ class DPCRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-    def run_policy(self):
+    def run_policy(self, batch_size=None, training=False):
+        batch_size = batch_size if batch_size is not None else self.batch_size
         loss, rollout, meta = simulate(
-            policy=self.policy, scenario=self.scenario, batch_size=self.batch_size,
-            training=False)
+            policy=self.policy, scenario=self.scenario, batch_size=batch_size,
+            training=training)
         return loss, rollout, meta
 
 
@@ -88,8 +92,10 @@ def main(**kwargs):
 
 if __name__ == "__main__":
 
-    from lbc.experiments.runner import parser
+    from lbc.experiments.runner import get_parser
+    from lbc.experiments.config import get_config
 
+    parser = get_parser()
     parser.add_argument(
         "--lr",
         type=float,
@@ -103,10 +109,10 @@ if __name__ == "__main__":
         help="number of training epochs"
     )
     parser.add_argument(
-        "--num-intervals",
+        "--num-time-windows",
         type=int,
         default=48,
-        help="number of time embeddings to use in policy model"
+        help="number of time windows (embeddings) to use in policy model"
     )
     parser.add_argument(
         "--hidden-dim",
@@ -123,25 +129,17 @@ if __name__ == "__main__":
     )
     a = parser.parse_args()
 
-    # Use the args to construct a full configuration for the experiment.
-    config = {
-        "name": f"DPC-{a.dr_program}-{a.hidden_dim}-{a.device}",
-        "policy_type": "DPC",
-        "batch_size": a.batch_size,
-        "dr_program": a.dr_program,
-        "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {
-            "model_config": {
-                "hidden_dim": a.hidden_dim,
-                "num_time_windows": a.num_time_windows
-            },
-            "lr": a.lr,
-            "num_epochs": a.num_epochs,
+    config = get_config("DPC", **vars(a))
+    config["policy_config"] = {
+        "model_config": {
+            "hidden_dim": a.hidden_dim,
+            "num_time_windows": a.num
         },
-        "dry_run": a.dry_run,
-        "results_dir": a.results_dir
+        "lr": a.lr,
+        "num_epochs": a.num_epochs,
+        "device": a.device
     }
-    print("ARGS:", config)
+    print("CONFIG:", config)
 
     _ = main(**config)
 

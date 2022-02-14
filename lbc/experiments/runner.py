@@ -8,30 +8,15 @@ from typing import Tuple
 
 from lbc.demand_response import DemandResponseProgram
 from lbc.policies import (
-    Policy, RBCPolicy, MPCOneShotPolicy, MPCPolicy,
-    DPCPolicy, CPLPolicy, RLCPolicy)
+    RBCPolicy, MPCOneShotPolicy, MPCPolicy, DPCPolicy, CPLPolicy, RLCPolicy)
 from lbc.scenario import Scenario
+from lbc.experiments.config import DEFAULT_RESULTS_DIR
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Directories
-THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-DEFAULT_RESULTS_DIR = os.path.join(THIS_DIR, "results")
 
-# Configuration dicts for scenarios.  Use _TEST for short runs.
-SCENARIO_DEFAULT = {
-    "start_time": "00:05:00",
-    "end_time": "23:55:00",
-    "zone_temp_init_mean": 26.0
-}
-
-SCENARIO_TEST = {
-    "start_time": "11:00:00",
-    "end_time": "13:00:00",
-    "zone_temp_init_mean": 23.0
-}
 
 # Policy mapping
 POLICY_MAP = {
@@ -48,7 +33,6 @@ class PolicyRunner:
 
     def __init__(
         self,
-        name: str = None,
         policy_type: str = None,
         dr_program: str = None,
         batch_size: int = None,
@@ -61,7 +45,6 @@ class PolicyRunner:
 
         assert policy_type in POLICY_MAP, f"invalid policy {policy_type}"
 
-        self.name = name
         self.policy_type = policy_type
         self.dr_program = dr_program
         self.dry_run = dry_run
@@ -84,7 +67,11 @@ class PolicyRunner:
 
 
     @classmethod
-    def run_policy(self) -> Tuple[any, any, any]:
+    def run_policy(
+        self,
+        batch_size: int = None,
+        training: bool = False,
+    ) -> Tuple[any, any, any]:
         """Do something here and return these values to save."""
         # return loss, rollout, meta
         pass
@@ -95,15 +82,27 @@ class PolicyRunner:
         raise NotImplementedError
 
 
-    def run(self):
+    @property
+    def name(self):
+        raise NotImplementedError
+
+
+    def run(
+        self,
+        batch_size: int = None,
+        training: bool = False,
+        save: bool = True
+    ) -> Tuple[any, any, any]:
 
         # Run the policy
         tic = time.time()
-        loss, rollout, meta = self.run_policy()
+        loss, rollout, meta = self.run_policy(
+            batch_size=batch_size, training=training)
         cpu_time = time.time() - tic
 
         # Save the results
-        self.save(rollout, meta, loss, cpu_time)
+        if save:
+            self.save(rollout, meta, loss, cpu_time)
 
         return loss, rollout, meta
 
@@ -124,7 +123,7 @@ class PolicyRunner:
         # Make the output directory if it doesn't exist.
         pathlib.Path(self.results_dir).mkdir(parents=True, exist_ok=True) 
 
-        if self.dry_run is not True:
+        if self.dry_run == 0:
             filename = os.path.join(self.results_dir, self.name + ".p")
             with open(filename, "wb") as f:
                 pickle.dump(
@@ -145,30 +144,32 @@ class PolicyRunner:
             logger.info("dry_run, skipped saving output")
 
 
-# Common arg parser
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--results-dir",
-    type=str,
-    default=None,
-    help="directory to save output in"
-)
-parser.add_argument(
-    "--dr",
-    type=str,
-    default="TOU",
-    dest="dr_program",
-    choices=["TOU", "PC", "RTP"]
-)
-parser.add_argument(
-    "--bsz",
-    default=1,
-    dest="batch_size",
-    type=int,
-)
-parser.add_argument(
-    "--dry-run",
-    type=int,
-    default=0,
-    help="0=save, 1=no save"
-)
+def get_parser():
+    # Common arg parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--results-dir",
+        type=str,
+        default=None,
+        help="directory to save output in"
+    )
+    parser.add_argument(
+        "--dr",
+        type=str,
+        default="TOU",
+        dest="dr_program",
+        choices=["TOU", "PC", "RTP"]
+    )
+    parser.add_argument(
+        "--bsz",
+        default=1,
+        dest="batch_size",
+        type=int,
+    )
+    parser.add_argument(
+        "--dry-run",
+        type=int,
+        default=0,
+        help="0=save, 1=no save"
+    )
+    return parser
