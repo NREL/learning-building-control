@@ -28,7 +28,7 @@ def main(dr, results_dir=None):
             key = os.path.basename(f)
             result = {
                 key: {
-                    "test_loss": _data["mean_loss"],
+                    "test_loss": _data["loss"],
                     "cpu_time": _data["cpu_time"]
                 }
             }
