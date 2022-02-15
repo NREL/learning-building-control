@@ -7,6 +7,8 @@ from ray import tune
 from ray.tune.registry import register_env
 
 from lbc.building_env import BuildingControlEnv
+from lbc.demand_response import DemandResponseProgram as DRP
+from lbc.scenario import Scenario
 
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,15 +24,17 @@ def main():
     parser.add_argument('--algo', type=str, default='PPO')
     parser.add_argument('--redis_password', type=str, default=None)
     parser.add_argument('--ip_head', type=str, default=None)
-    parser.add_argument('--num_workers', type=int, default=5)
+    parser.add_argument('--num_workers', type=int, default=35)
     parser.add_argument('--train_batch_size', type=int, default=5000)
     parser.add_argument('--episodes_per_batch', type=int, default=5000)
+    parser.add_argument('--dr_program', type=str, default='TOU')
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--sigma', type=float, default=0.02)
     parser.add_argument('--run_hour', type=float, default=0.9)
     args = parser.parse_args()
 
-    env_name = 'BuildingControlTOUEnv-v0'
+    dr_program_type = args.dr_program
+    env_name = 'BuildingControl' + dr_program_type + 'Env-v0'
 
     if args.redis_password is None:
         # Single node
@@ -41,11 +45,13 @@ def main():
         ray.init(_redis_password=args.redis_password,
                  address=args.ip_head)
 
-    def env_creater(config):
-        env = BuildingControlEnv()
+    def env_creator(config):
+        drp = DRP(dr_program_type)
+        s = Scenario(dr_program=drp)
+        env = BuildingControlEnv(scenario=s)
         return env
 
-    register_env(env_name, env_creater)
+    register_env(env_name, env_creator)
 
     algo_specific_config = {
         'ES': {
@@ -62,7 +68,7 @@ def main():
     config = {
         "env": env_name,
         "model": {
-            "fcnet_hiddens": [256, 256],
+            "fcnet_hiddens": [128, 128],
         },
         "num_workers": args.num_workers,
     }
