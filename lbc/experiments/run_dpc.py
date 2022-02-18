@@ -18,7 +18,10 @@ class DPCRunner(PolicyRunner):
 
     @property
     def name(self):
-        return f"DPC-{self.dr_program}"
+        lr = self.policy_config["lr"]
+        nw = self.policy_config["model_config"]["num_time_windows"]
+        return f"DPC-{self.dr_program}-{nw}-{lr:0.3f}"
+
 
     def train_policy(self, **kwargs):
 

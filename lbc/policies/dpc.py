@@ -29,7 +29,7 @@ class SingleStepDPCModel(nn.Module):
 
         super().__init__(**kwargs)
 
-        input_size = 2 * self.num_zones + 4 * self.num_zones + 3
+        input_size = 2 * self.num_zones + 4 * self.num_zones + 4
         self.num_time_windows = num_time_windows
         self.num_episode_steps = num_episode_steps
         self.steps_per_window = ceil(num_episode_steps / num_time_windows)
@@ -41,17 +41,18 @@ class SingleStepDPCModel(nn.Module):
         self.policy2 = nn.Linear(2 * hidden_dim, hidden_dim)
         self.policy3 = nn.Linear(hidden_dim, self.num_zones + 1)
 
-    def forward(self, *, x, u, t, energy_price, zone_temp, temp_oa, pc_limit=None):
+    def forward(self, *, x, u, t, last_energy_price, predicted_energy_price, 
+        zone_temp, temp_oa, pc_limit=None):
 
         t_embed = self.embed(t)
         x_t = self.embed_layer(t_embed)
 
         if pc_limit is None:
-            pc_limit = torch.zeros_like(energy_price)
+            pc_limit = torch.zeros_like(last_energy_price)
 
         x_pi = torch.cat(
             (x, zone_temp, u.reshape(-1, u.shape[1] * u.shape[2]),
-             energy_price, temp_oa, pc_limit),
+             last_energy_price, predicted_energy_price, temp_oa, pc_limit),
             axis=-1)
         x_pi = F.relu(self.policy1(x_pi))
 
@@ -101,8 +102,12 @@ class DPCPolicy(Policy):
 
         device = self.device
 
-        energy_price = to_torch(
+        predicted_energy_price = to_torch(
             batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
+
+        t_last = (t - 12) % batch.energy_price.shape[-1]
+        last_energy_price = to_torch(
+            batch.energy_price[:, t_last].reshape((-1, 1))).to(device)
 
         t_torch = floor(t / self.model.steps_per_window) \
             * torch.ones(bsz, dtype=torch.long).to(device)  # / num_time 
@@ -112,10 +117,11 @@ class DPCPolicy(Policy):
         if scenario.dr_program.program_type == "PC":
             pc_limit = scenario.dr_program.power_limit.values[t][0] * torch.ones(bsz, 1)
         else:
-            pc_limit = torch.zeros_like(energy_price)
+            pc_limit = torch.zeros_like(last_energy_price)
 
         action = self.model(
-            x=x, u=u, t=t_torch, energy_price=energy_price, 
+            x=x, u=u, t=t_torch, last_energy_price=last_energy_price,
+            predicted_energy_price=predicted_energy_price, 
             zone_temp=zone_temp, temp_oa=temp_oa, pc_limit=pc_limit)
 
         if self.exploration_noise_std is not None and training:
