@@ -73,7 +73,7 @@ class BuildingControlEnv(gym.Env):
         self.scalar_obs_lower = np.array([-np.inf] * dim_obs)
         self.observation_space = spaces.Box(self.scalar_obs_lower,
                                             self.scalar_obs_upper,
-                                            dtype=np.float32)
+                                            dtype=np.float)
 
         self.action_upper = np.array([1.0] * (self.num_zone + 1))
         self.action_lower = np.array([-1.0] * (self.num_zone + 1))
