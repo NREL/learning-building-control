@@ -256,14 +256,6 @@ class Scenario:
                 self.dr_program.energy_price.values.squeeze() for s, e in times])
             predicted_energy_price = energy_price
 
-        def _rescale(x, alpha=.1):
-            return x.min() + alpha * (x - x.min()) / (x.max() - x.min())
-
-        # Optionally rescale [a, b] to [a, alpha*b] to look at scale sensitivity
-        #if self.price_rescale_factor is not None:
-        #    # energy_price = _rescale(energy_price, alpha=self.price_rescale_factor)
-        predicted_energy_price = _rescale(predicted_energy_price, alpha=10.)
-
         # Convert prices to tensor
         energy_price = energy_price if not as_tensor else to_torch(energy_price)
         predicted_energy_price = predicted_energy_price \

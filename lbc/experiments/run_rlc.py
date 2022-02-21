@@ -11,7 +11,7 @@ class RLCRunner(PolicyRunner):
 
     @property
     def name(self):
-        return f"RLC-{self.dr_program}"
+        return f"RLC-{self.dr_program}" + self.name_ext
 
     def run_policy(self, batch_size=None, training=False):
 

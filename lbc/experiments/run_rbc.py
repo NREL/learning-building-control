@@ -14,7 +14,7 @@ class RBCRunner(PolicyRunner):
     def name(self):
         pf = self.policy_config["p_flow"]
         pt = self.policy_config["p_temp"]
-        return f"RBC-{self.dr_program}-{pf:1.3f}-{pt:1.3f}"
+        return f"RBC-{self.dr_program}-{pf:1.3f}-{pt:1.3f}" + self.name_ext
 
 
     def run_policy(self, batch_size=None, training=False):

@@ -39,6 +39,7 @@ class PolicyRunner:
         scenario_config: dict = None,
         policy_config: dict = None,
         results_dir: str = None,
+        name_ext: str = None,
         **kwargs
     ):
 
@@ -47,6 +48,7 @@ class PolicyRunner:
         self.policy_type = policy_type
         self.dr_program = dr_program
         self.results_dir = results_dir if results_dir is not None else DEFAULT_RESULTS_DIR
+        self.name_ext = name_ext if name_ext is not None else ""
 
         scenario_config["dr_program"] = DemandResponseProgram(dr_program)
         self.scenario_config = scenario_config
@@ -169,5 +171,11 @@ def get_parser():
         type=int,
         default=0,
         help="0=full scenario, 1=short scenairo"
+    )
+    parser.add_argument(
+        "--name-ext",
+        type=str,
+        default=None,
+        help="extension to add to output filename"
     )
     return parser

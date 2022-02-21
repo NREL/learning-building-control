@@ -30,7 +30,7 @@ class CPLRunner(PolicyRunner):
     def name(self):
         la = self.policy_config["lookahead"]
         uvf = self.policy_config["use_value_function"]
-        return f"CPL-{self.dr_program}-{la}-{uvf}"
+        return f"CPL-{self.dr_program}-{la}-{uvf}" + self.name_ext
 
 
     def train_policy(self):
