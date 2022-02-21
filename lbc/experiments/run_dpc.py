@@ -14,7 +14,7 @@ logger = logging.getLogger(__file__)
 
 
 class DPCRunner(PolicyRunner):
-
+    
 
     @property
     def name(self):
@@ -66,8 +66,10 @@ class DPCRunner(PolicyRunner):
                 losses.append(loss.detach().numpy())
                 test_losses.append(test_loss.detach().numpy())
 
+                imitation_cost = rollout.data["imitation_cost"].sum(-1).mean()
+
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},")
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}, {imitation_cost:1.3f}")
                     
             except KeyboardInterrupt:
                 logger.info("stopped")

@@ -122,7 +122,7 @@ def get_config(name, **args):
     config = CONFIGS[name].copy()
 
     # Update common, top-level values if given
-    common = {k: v for k, v in args.items() if k in COMMON}
+    common = {k: v for k, v in args.items() if k in COMMON.copy()}
     config.update(common)
 
     return config

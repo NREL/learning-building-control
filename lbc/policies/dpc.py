@@ -24,43 +24,64 @@ class SingleStepDPCModel(nn.Module):
         num_episode_steps: int,
         hidden_dim: int = 64,
         embed_dim: int = 128,
+        price_forecast_dim: int = None,
         **kwargs
     ):
 
         super().__init__(**kwargs)
 
-        input_size = 2 * self.num_zones + 4 * self.num_zones + 4
         self.num_time_windows = num_time_windows
         self.num_episode_steps = num_episode_steps
         self.steps_per_window = ceil(num_episode_steps / num_time_windows)
+        self.price_forecast_dim = price_forecast_dim if price_forecast_dim is not None else 1
+
+        # Input size, needs to be updated if we are looking ahead on prices
+        self.input_size = 2 * self.num_zones + 4 * self.num_zones + 3 + self.price_forecast_dim
+        # self.input_size = self.num_zones + 3 + self.price_forecast_dim
 
         # # Create the policy layers.
-        self.embed = nn.Embedding(num_time_windows, embedding_dim=embed_dim)
-        self.embed_layer = nn.Linear(embed_dim, hidden_dim)
-        self.policy1 = nn.Linear(input_size, hidden_dim)
-        self.policy2 = nn.Linear(2 * hidden_dim, hidden_dim)
+        self.embed = None
+        if embed_dim is not None:
+            self.embed = nn.Embedding(num_time_windows, embedding_dim=embed_dim)
+            self.first_dim = embed_dim + self.input_size
+        else:
+            self.embed = None
+            self.first_dim = self.input_size + 1
+        #self.input_norm = nn.BatchNorm1d(self.input_size)
+        self.policy1 = nn.Linear(self.first_dim, hidden_dim)
+        # self.cat_norm = nn.BatchNorm1d(embed_dim + self.input_size)
+        self.policy2 = nn.Linear(hidden_dim, hidden_dim)
         self.policy3 = nn.Linear(hidden_dim, self.num_zones + 1)
 
-    def forward(self, *, x, u, t, last_energy_price, predicted_energy_price, 
-        zone_temp, temp_oa, pc_limit=None):
 
-        t_embed = self.embed(t)
-        x_t = self.embed_layer(t_embed)
+    def forward(self, *, x, u, t, last_energy_price, zone_temp, temp_oa, 
+        predicted_energy_price=None, pc_limit=None):
+
+        bsz = x.shape[0]
+        
+        if self.embed is not None:
+            x_t = self.embed(t)
+        else:
+            x_t = t[0] * torch.ones(bsz, 1)
+        # x_t = self.embed_layer(t_embed)
 
         if pc_limit is None:
             pc_limit = torch.zeros_like(last_energy_price)
+    
+        if predicted_energy_price is None:
+            predicted_energy_price = torch.zeros_like(bsz, self.price_forecast_dim)
 
         x_pi = torch.cat(
             (x, zone_temp, u.reshape(-1, u.shape[1] * u.shape[2]),
-             last_energy_price, predicted_energy_price, temp_oa, pc_limit),
+             last_energy_price, temp_oa, predicted_energy_price, pc_limit),
             axis=-1)
-        x_pi = F.relu(self.policy1(x_pi))
 
-        action = torch.cat((x_t, x_pi), axis=-1)
-        action = F.relu(self.policy2(action))
-        action = self.policy3(action)
+        logits = torch.cat((x_t, x_pi), axis=-1)
+        logits = F.relu(self.policy1(logits))
+        logits = F.relu(self.policy2(logits))
+        logits = torch.sigmoid(self.policy3(logits))
 
-        return action
+        return logits
 
 
 class DPCPolicy(Policy):
@@ -102,12 +123,12 @@ class DPCPolicy(Policy):
 
         device = self.device
 
-        predicted_energy_price = to_torch(
-            batch.predicted_energy_price[:, t].reshape((-1, 1))).to(device)
+        t_la = [(t + s) % num_time for s in range(self.model.price_forecast_dim)]
+        # print(self.model.price_forecast_dim, t, num_time, t_la, list(range(0, 12*self.model.price_forecast_dim, 12)))
+        predicted_energy_price = batch.predicted_energy_price[:, t_la].reshape((-1, len(t_la))).to(device)
 
-        t_last = (t - 12) % batch.energy_price.shape[-1]
-        last_energy_price = to_torch(
-            batch.energy_price[:, t_last].reshape((-1, 1))).to(device)
+        t_last = (t - 12) % num_time
+        last_energy_price = batch.energy_price[:, t_last].reshape((-1, 1)).to(device)
 
         t_torch = floor(t / self.model.steps_per_window) \
             * torch.ones(bsz, dtype=torch.long).to(device)  # / num_time 
@@ -119,11 +140,17 @@ class DPCPolicy(Policy):
         else:
             pc_limit = torch.zeros_like(last_energy_price)
 
-        action = self.model(
+        logits = self.model(
             x=x, u=u, t=t_torch, last_energy_price=last_energy_price,
             predicted_energy_price=predicted_energy_price, 
             zone_temp=zone_temp, temp_oa=temp_oa, pc_limit=pc_limit)
 
+        # squash to range
+        amin = to_torch(scenario.action_min, batch_size=bsz)
+        amax = to_torch(scenario.action_max, batch_size=bsz)
+        action = amin + logits * (amax - amin)
+
+        # Optionally add exploration noise during training
         if self.exploration_noise_std is not None and training:
             noise = self.exploration_noise_std \
                 * torch.randn(*action.shape).to(self.device)

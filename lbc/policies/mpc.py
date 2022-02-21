@@ -281,11 +281,16 @@ class MPC:
             power_cost = delta_t * sum(
                 self.energy_price[wrapped_index[t]] * m.p_consumed[t] for t in m.time)
             
+            control_energy_cost = \
+                self.scenario.control_variance_penalty \
+                    * sum((m.action[t, c] - m.action[t-1, c])**2 
+                        for t in m.time_not_init for c in m.control)
+
             discomfort_cost = self.scenario.comfort_penalty * sum(
                 m.comfort_viol_lower[t, z]**2 + m.comfort_viol_upper[t, z]**2
                     for t in m.time for z in m.zone)
 
-            cost = power_cost + discomfort_cost
+            cost = power_cost + discomfort_cost + control_energy_cost
 
             if self.dr_program.program_type == 'PC':
 
@@ -411,9 +416,9 @@ class MPCPolicy(Policy):
         temp_oa = batch.temp_oa.detach().numpy()
         q_solar = batch.q_solar.detach().numpy()
         if self.one_shot:
-            batch_energy_price = batch.energy_price.detach().numpy()
+            batch_energy_price = batch.energy_price.detach().numpy().copy()
         else:
-            batch_energy_price = batch.predicted_energy_price.detach().numpy()
+            batch_energy_price = batch.predicted_energy_price.detach().numpy().copy()
         x = x.detach().numpy()
         zone_temp = zone_temp.detach().numpy()
 
@@ -427,48 +432,46 @@ class MPCPolicy(Policy):
 
                 return self.cached_actions[:, t, :], {"df": self.cached_dfs}
 
+            # Get the data for each sample.
+            _temp_oa = temp_oa[b, :].squeeze()
+            _q_solar = q_solar[b, :, :].squeeze().T
+            _zone_temp = zone_temp[b, :].squeeze()
+            _x = x[b, :].squeeze()
+            _action_init = action_init[b, :].squeeze() \
+                if action_init is not None else None
+
+            energy_price = batch_energy_price[b, :].squeeze()
+
+            # Create the MPC model instance.
+            action_sequence = None
+            if self.action_sequence is not None:
+                action_sequence = self.action_sequence[:, b, :]
+
+            mpc = MPC(
+                zone_model=scenario.zone_model,
+                scenario=scenario, 
+                step_idx=t,
+                num_lookahead_steps=la_steps,
+                temp_oa=_temp_oa,
+                q_solar=_q_solar,
+                zone_temp_init=_zone_temp,
+                x_init=_x,
+                action_init=_action_init,
+                linearize=self.linearize,
+                solver=self.solver,
+                energy_price=energy_price,
+                action_sequence=action_sequence)
+
+            # Solve the MPC problem and extract the first action.
+            df = mpc.solve(tee=self.tee)
+            action = df[["flow_0", "flow_1", "flow_2", "flow_3", "flow_4",
+                            "discharge_temp"]]
+
+            if self.one_shot:
+                action = action.values
+                self.cached_dfs.append(df.copy())
             else:
-
-                # Get the data for each sample.
-                _temp_oa = temp_oa[b, :].squeeze()
-                _q_solar = q_solar[b, :, :].squeeze().T
-                _zone_temp = zone_temp[b, :].squeeze()
-                _x = x[b, :].squeeze()
-                _action_init = action_init[b, :].squeeze() \
-                    if action_init is not None else None
-
-                energy_price = batch_energy_price[b, :].squeeze()
-
-                # Create the MPC model instance.
-                action_sequence = None
-                if self.action_sequence is not None:
-                    action_sequence = self.action_sequence[:, b, :]
-
-                mpc = MPC(
-                    zone_model=scenario.zone_model,
-                    scenario=scenario, 
-                    step_idx=t,
-                    num_lookahead_steps=la_steps,
-                    temp_oa=_temp_oa,
-                    q_solar=_q_solar,
-                    zone_temp_init=_zone_temp,
-                    x_init=_x,
-                    action_init=_action_init,
-                    linearize=self.linearize,
-                    solver=self.solver,
-                    energy_price=energy_price,
-                    action_sequence=action_sequence)
-
-                # Solve the MPC problem and extract the first action.
-                df = mpc.solve(tee=self.tee)
-                action = df[["flow_0", "flow_1", "flow_2", "flow_3", "flow_4",
-                             "discharge_temp"]]
-
-                if self.one_shot:
-                    action = action.values
-                    self.cached_dfs.append(df.copy())
-                else:
-                    action = action.values[0, :].squeeze()
+                action = action.values[0, :].squeeze()
 
             torch_actions.append(to_torch(action))
 

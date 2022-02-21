@@ -131,7 +131,8 @@ def simulate(
 
         # Get current values of exogenous data and energy price.
         (temp_oa, q_solar, comfort_min, comfort_max, energy_price,
-         predicted_energy_price) = batch.get_time(t, device=device)
+         predicted_energy_price, actions_to_imitate) = \
+             batch.get_time(t, device=device)
 
         # Set power constraint limit and penalty depending on whether we're
         # using that demand response program.
@@ -160,6 +161,7 @@ def simulate(
             comfort_penalty=scenario.comfort_penalty,
             pc_penalty=pc_penalty,
             pc_limit=pc_limit,
+            actions_to_imitate=actions_to_imitate if training else None,
             device=device)
 
         # Evolve the "true" dynamics given the (clipped) action, current
