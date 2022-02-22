@@ -48,7 +48,7 @@ class PolicyRunner:
         self.policy_type = policy_type
         self.dr_program = dr_program
         self.results_dir = results_dir if results_dir is not None else DEFAULT_RESULTS_DIR
-        self.name_ext = name_ext if name_ext is not None else ""
+        self.name_ext = f"-{name_ext}" if name_ext is not None else ""
 
         scenario_config["dr_program"] = DemandResponseProgram(dr_program)
         self.scenario_config = scenario_config

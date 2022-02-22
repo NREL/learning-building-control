@@ -30,7 +30,8 @@ class CPLRunner(PolicyRunner):
     def name(self):
         la = self.policy_config["lookahead"]
         uvf = self.policy_config["use_value_function"]
-        return f"CPL-{self.dr_program}-{la}-{uvf}" + self.name_ext
+        ntw = self.policy_config["num_time_windows"]
+        return f"CPL-{self.dr_program}-{la}-{ntw}-{uvf}" + self.name_ext
 
 
     def train_policy(self):
@@ -61,7 +62,7 @@ class CPLRunner(PolicyRunner):
                 # gradient update
                 loss, rollout, meta = simulate(
                     policy=policy, scenario=self.scenario, batch_size=self.batch_size, 
-                    training=True, q=self.q, Q_sqrt=self.Q_sqrt)
+                    training=True, shuffle=True, q=self.q, Q_sqrt=self.Q_sqrt)
 
                 # Take mean and normalize
                 loss = loss.mean()
@@ -147,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-time-windows",
         type=int,
-        default=24,
+        default=96,
         help="number of time windows to use in modeling value function"
     )
     parser.add_argument(

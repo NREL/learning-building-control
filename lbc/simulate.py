@@ -190,6 +190,7 @@ def simulate(
             action_min=action_min,
             action_max=action_max,
             comfort_viol_deg_hr=comfort_viol_deg_hr,
+            q_solar=q_solar,
             **cost_data.__dict__
         )
 
