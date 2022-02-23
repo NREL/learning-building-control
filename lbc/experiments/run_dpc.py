@@ -164,7 +164,7 @@ if __name__ == "__main__":
         "num_epochs": a.num_epochs,
         "device": a.device
     }
-    print("CONFIG:", config)
+    logger.info(f"CONFIG: {config}")
 
     _ = main(**config)
 

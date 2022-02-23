@@ -55,6 +55,6 @@ if __name__ == "__main__":
     config = get_config("RBC", **vars(a))
     config["policy_config"]["p_flow"] = a.p_flow
     config["policy_config"]["p_temp"] = a.p_temp
-    print("CONFIG:", config)  
+    logger.info(f"CONFIG: {config}") 
       
     _ = main(**config)

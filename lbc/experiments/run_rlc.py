@@ -50,6 +50,6 @@ if __name__ == "__main__":
     # Use the args to construct a full configuration for the experiment.
     config = get_config("RLC", **vars(a))
     config["policy_config"]["node_ip_address"] = a.node_ip_address
-    print("CONFIG:", config)
+    logger.info(f"CONFIG: {config}")
 
     _ = main(**config)

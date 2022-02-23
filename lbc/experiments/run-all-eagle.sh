@@ -4,7 +4,7 @@
 set -xe
 
 # Shared settings
-DR=RTP
+DR=PC
 BSZ=31
 
 # Results dir, export so scripts have it
@@ -31,15 +31,15 @@ sbatch --time=8:00:00 run_mpc.sh $BSZ $DR $OUTDIR 36
 sbatch --time=12:00:00 run_mpc.sh $BSZ $DR $OUTDIR 48
 
 # CPL No Learning
-sbatch --time=1:00:00 run_cpl.sh 8 $DR $OUTDIR 3 -200 0 -1 1 
-sbatch --time=1:00:00 run_cpl.sh 8 $DR $OUTDIR 6 -200 0 -1 1 
-sbatch --time=1:00:00 run_cpl.sh 8 $DR $OUTDIR 12 -200 0 -1 1 
-sbatch --time=1:00:00 run_cpl.sh 8 $DR $OUTDIR 24 -200 0 -1 1 
-sbatch --time=1:00:00 run_cpl.sh 8 $DR $OUTDIR 36 -200 0 -1 1 
-sbatch --time=1:00:00 run_cpl.sh 8 $DR $OUTDIR 48 -200 0 -1 1 
+sbatch --time=1:00:00 run_cpl.sh $BSZ $DR $OUTDIR 3 1 0 -1 1 
+sbatch --time=1:00:00 run_cpl.sh $BSZ $DR $OUTDIR 6 1 0 -1 1 
+sbatch --time=1:00:00 run_cpl.sh $BSZ $DR $OUTDIR 12 1 0 -1 1 
+sbatch --time=1:00:00 run_cpl.sh $BSZ $DR $OUTDIR 24 1 0 -1 1 
+sbatch --time=1:00:00 run_cpl.sh $BSZ $DR $OUTDIR 36 1 0 -1 1 
+sbatch --time=1:00:00 run_cpl.sh $BSZ $DR $OUTDIR 48 1 0 -1 1 
 
 # CPL with learning
-# 24 time windows (~60 minutes per windows)
+# # 24 time windows (~60 minutes per windows)
 sbatch --time=4:00:00 run_cpl.sh 8 $DR $OUTDIR 3 200 1 0.1 24
 sbatch --time=4:00:00 run_cpl.sh 8 $DR $OUTDIR 6 200 1 0.1 24
 sbatch --time=8:00:00 run_cpl.sh 8 $DR $OUTDIR 12 200 1 0.1 24

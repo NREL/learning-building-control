@@ -62,6 +62,6 @@ if __name__ == "__main__":
     config["policy_config"]["tee"] = a.tee
     config["policy_config"]["num_lookahead_steps"] = a.lookahead
     config["scenario_config"]["control_variance_penalty"] = a.control_variance_penalty
-    print("CONFIG:", config)
+    logger.info(f"CONFIG: {config}")
 
     _ = main(**config)

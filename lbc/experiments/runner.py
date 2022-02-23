@@ -145,9 +145,6 @@ class PolicyRunner:
 
 def save_runner(runner, config, test_data, train_data=None, **kwargs):
 
-    if isinstance(runner, RLCRunner):
-        runner.policy = None
-
     payload = {
         "runner": runner,
         "config": config,

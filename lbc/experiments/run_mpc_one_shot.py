@@ -57,6 +57,6 @@ if __name__ == "__main__":
     config = get_config("MPCOneShot", **vars(a))
     config["policy_config"]["tee"] = a.tee
     config["scenario_config"]["control_variance_penalty"] = a.control_variance_penalty
-    print("CONFIG:", config)
+    logger.info(f"CONFIG: {config}")
 
     _ = main(**config)
