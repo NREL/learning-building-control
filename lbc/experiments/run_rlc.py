@@ -27,7 +27,9 @@ class RLCRunner(PolicyRunner):
 def main(**config):
     runner = RLCRunner(**config)
     test_data = runner.run()
-    # We can't pickle the rllib trainer, so just save None (it is easy to re-run!)
+    # We can't pickle the rllib trainer, so we delete the policy before
+    # saving -- we can always reload it using the rllib interface.
+    runner.policy = None
     return save_runner(runner=runner, config=config, test_data=test_data)
 
 

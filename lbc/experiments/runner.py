@@ -10,7 +10,6 @@ from lbc.policies import (
     RBCPolicy, MPCOneShotPolicy, MPCPolicy, DPCPolicy, CPLPolicy, RLCPolicy)
 from lbc.scenario import Scenario
 from lbc.experiments.config import DEFAULT_RESULTS_DIR
-from lbc.experiments import RLCRunner
 
 
 logging.basicConfig(level=logging.INFO)
