@@ -9,6 +9,6 @@ set -x
 
 source env.sh
 
-python run_mpc_one_shot.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
-    --results-dir $RESDIR
+python run_mpc_one_shot.py --bsz $1 --dr $2 --results-dir $3 \
+    --control-variance-penalty $4 --name-ext $4
 

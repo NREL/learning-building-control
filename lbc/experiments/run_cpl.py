@@ -1,11 +1,12 @@
 import logging
+import os
 import time
 
 from tqdm import tqdm
 
 import torch
 
-from lbc.experiments.runner import PolicyRunner
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 
@@ -75,7 +76,7 @@ class CPLRunner(PolicyRunner):
 
                 # Evaluate on the test set
                 test_loss, _, _ = simulate(
-                    policy=policy, scenario=self.scenario, batch_size=batch_size,
+                    policy=policy, scenario=self.scenario, batch_size=31,
                     training=False, q=self.q, Q_sqrt=self.Q_sqrt)
                 test_loss = test_loss.mean()
 
@@ -93,12 +94,12 @@ class CPLRunner(PolicyRunner):
         meta.update({
             "model": [self.q.clone().detach(), self.Q_sqrt.clone().detach()],
             "losses": losses,
-            "test_losses": test_losses
+            "test_losses": test_losses,
+            "train_time": time.time() - tic
         })
 
         # Save results
-        cpu_time = time.time() - tic
-        self.save(rollout, meta, loss, cpu_time, name_suffix="train")
+        #self.save(rollout, meta, loss, cpu_time, name_suffix="train")
 
         return loss, rollout, meta
 
@@ -114,17 +115,22 @@ class CPLRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-def main(**kwargs):
+def main(**config):
     
-    runner = CPLRunner(**kwargs)
+    runner = CPLRunner(**config)
     
-    policy_config = kwargs.get("policy_config", {})
+    train_data = None
+    policy_config = config.get("policy_config", {})
     if "use_value_function" in policy_config and policy_config["use_value_function"] == 1:
         logger.info("starting training run")
-        _ = runner.train_policy()
+        train_data = runner.train_policy()
 
     logger.info("evaluating policy")
-    _ = runner.run(batch_size=31)
+    test_data = runner.run(batch_size=31)
+
+    return save_runner(runner=runner, config=config, test_data=test_data, 
+        train_data=train_data)
+
 
 
 if __name__ == "__main__":
@@ -148,7 +154,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-time-windows",
         type=int,
-        default=96,
+        default=24,
         help="number of time windows to use in modeling value function"
     )
     parser.add_argument(

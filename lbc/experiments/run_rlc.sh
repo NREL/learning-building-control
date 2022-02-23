@@ -10,5 +10,4 @@ set -x
 
 source env.sh
 
-python run_rlc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
-    --results-dir $RESDIR
+python run_rlc.py --bsz $1 --dr $2 --results-dir $3

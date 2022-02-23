@@ -9,6 +9,6 @@ set -x
 
 source env.sh
 
-python run_mpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
-    --lookahead=$1 --results-dir $RESDIR
+python run_mpc.py --bsz $1 --dr $2 --results-dir $3 \
+    --lookahead=$4 
 

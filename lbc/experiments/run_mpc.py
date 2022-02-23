@@ -1,6 +1,6 @@
 import logging
 
-from lbc.experiments.runner import PolicyRunner
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 
@@ -27,9 +27,10 @@ class MPCRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-def main(**kwargs):
-    runner = MPCRunner(**kwargs)
-    runner.run()
+def main(**config):
+    runner = MPCRunner(**config)
+    test_data = runner.run()
+    return save_runner(runner=runner, config=config, test_data=test_data)
 
 
 if __name__ == "__main__":

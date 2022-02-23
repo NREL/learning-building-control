@@ -1,6 +1,6 @@
 import logging
 
-from lbc.experiments.runner import PolicyRunner
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 logger = logging.getLogger(__file__)
@@ -9,13 +9,11 @@ logger = logging.getLogger(__file__)
 
 class RBCRunner(PolicyRunner):
 
-
     @property
     def name(self):
         pf = self.policy_config["p_flow"]
         pt = self.policy_config["p_temp"]
         return f"RBC-{self.dr_program}-{pf:1.3f}-{pt:1.3f}" + self.name_ext
-
 
     def run_policy(self, batch_size=None, training=False):
 
@@ -28,9 +26,10 @@ class RBCRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-def main(**kwargs):
-    runner = RBCRunner(**kwargs)
-    runner.run()
+def main(**config):
+    runner = RBCRunner(**config)
+    test_data = runner.run()
+    return save_runner(runner=runner, config=config, test_data=test_data)
     
 
 if __name__ == "__main__":

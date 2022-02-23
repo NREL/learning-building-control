@@ -1,6 +1,6 @@
 import logging
 
-from lbc.experiments.runner import PolicyRunner
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 
@@ -24,9 +24,11 @@ class RLCRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-def main(**kwargs):
-    runner = RLCRunner(**kwargs)
-    runner.run()
+def main(**config):
+    runner = RLCRunner(**config)
+    test_data = runner.run()
+    # We can't pickle the rllib trainer, so just save None (it is easy to re-run!)
+    return save_runner(runner=runner, config=config, test_data=test_data)
 
 
 if __name__ == "__main__":

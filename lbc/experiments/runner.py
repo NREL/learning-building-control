@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import pathlib
 import pickle
 import time
 from typing import Tuple
@@ -11,6 +10,7 @@ from lbc.policies import (
     RBCPolicy, MPCOneShotPolicy, MPCPolicy, DPCPolicy, CPLPolicy, RLCPolicy)
 from lbc.scenario import Scenario
 from lbc.experiments.config import DEFAULT_RESULTS_DIR
+from lbc.experiments import RLCRunner
 
 
 logging.basicConfig(level=logging.INFO)
@@ -99,49 +99,70 @@ class PolicyRunner:
         tic = time.time()
         loss, rollout, meta = self.run_policy(
             batch_size=batch_size, training=training)
-        cpu_time = time.time() - tic
+        meta["run_time"] = time.time() - tic
 
         # Save the results
-        self.save(rollout, meta, loss, cpu_time)
+        #self.save(rollout, meta, loss, cpu_time)
 
         return loss, rollout, meta
 
 
-    def save(
-        self,
-        rollout,
-        meta,
-        batched_loss,
-        cpu_time,
-        name_suffix = None
-    ):
+    # def save(
+    #     self,
+    #     rollout,
+    #     meta,
+    #     batched_loss,
+    #     cpu_time,
+    #     name_suffix = None
+    # ):
 
-        loss = batched_loss.mean().item()
+    #     loss = batched_loss.mean().item()
 
-        logger.info(f"[{self.name}] bsz={self.batch_size},"
-                    + f" loss={loss:1.3f}, time={cpu_time:1.1f}")
+    #     logger.info(f"[{self.name}] bsz={self.batch_size},"
+    #                 + f" loss={loss:1.3f}, time={cpu_time:1.1f}")
 
-        # Make the output directory if it doesn't exist.
-        pathlib.Path(self.results_dir).mkdir(parents=True, exist_ok=True) 
+    #     # Make the output directory if it doesn't exist.
+    #     pathlib.Path(self.results_dir).mkdir(parents=True, exist_ok=True) 
 
-        # Save the output
-        name = self.name if name_suffix is None else self.name + "-" + name_suffix
-        filename = os.path.join(self.results_dir, name + ".p")
-        with open(filename, "wb") as f:
-            pickle.dump(
-                {
-                    "name": self.name,
-                    "scenario_config": self.scenario_config,
-                    "batch_size": self.batch_size,
-                    "meta": meta,
-                    "rollout": rollout,
-                    "cpu_time": cpu_time,
-                    "batched_loss": batched_loss,
-                    "loss": loss,
-                    "policy_config": self.policy_config
-                }, f
-            )
-        logger.info(f"saved to {filename}")
+    #     # Save the output
+    #     name = self.name if name_suffix is None else self.name + "-" + name_suffix
+    #     filename = os.path.join(self.results_dir, name + ".p")
+    #     with open(filename, "wb") as f:
+    #         pickle.dump(
+    #             {
+    #                 "name": self.name,
+    #                 "scenario_config": self.scenario_config,
+    #                 "batch_size": self.batch_size,
+    #                 "meta": meta,
+    #                 "rollout": rollout,
+    #                 "cpu_time": cpu_time,
+    #                 "batched_loss": batched_loss,
+    #                 "loss": loss,
+    #                 "policy_config": self.policy_config
+    #             }, f
+    #         )
+    #     logger.info(f"saved to {filename}")
+
+
+def save_runner(runner, config, test_data, train_data=None, **kwargs):
+
+    if isinstance(runner, RLCRunner):
+        runner.policy = None
+
+    payload = {
+        "runner": runner,
+        "config": config,
+        "test_data": test_data,
+        "train_data": train_data,
+        **kwargs
+    }
+    filename = os.path.join(runner.results_dir, runner.name + ".p")
+
+    with open(filename, "wb") as f:
+        pickle.dump(payload, f)    
+    logger.info(f"saved to {filename}")
+
+    return payload
 
 
 def get_parser():

@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import torch
 
-from lbc.experiments.runner import PolicyRunner
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 
@@ -78,12 +78,9 @@ class DPCRunner(PolicyRunner):
         meta.update({
             "model": deepcopy(policy.model),
             "losses": losses,
-            "test_losses": test_losses
+            "test_losses": test_losses,
+            "train_time": time.time() - tic
         })
-
-        # Save results
-        cpu_time = time.time() - tic
-        self.save(rollout, meta, loss, cpu_time, name_suffix="train")
 
         return loss, rollout, meta
 
@@ -99,10 +96,16 @@ class DPCRunner(PolicyRunner):
         return loss, rollout, meta
 
 
-def main(**kwargs):
-    runner = DPCRunner(**kwargs)
-    _ = runner.train_policy()
-    _ = runner.run()
+def main(**config):
+
+    runner = DPCRunner(**config)
+
+    train_data = runner.train_policy()
+    test_data = runner.run()
+    
+    return save_runner(
+        runner=runner, config=config, test_data=test_data, train_data=train_data)
+
 
 
 if __name__ == "__main__":
@@ -132,8 +135,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--hidden-dim",
         type=int,
-        default=128,
+        default=512,
         help="dimension of hidden layers"
+    )
+    parser.add_argument(
+        "--embed-dim",
+        type=int,
+        default=128,
+        help="dimension of embedding layers"
     )
     parser.add_argument(
         "--device",
@@ -148,6 +157,7 @@ if __name__ == "__main__":
     config["policy_config"] = {
         "model_config": {
             "hidden_dim": a.hidden_dim,
+            "embed_dim": a.embed_dim,
             "num_time_windows": a.num_time_windows
         },
         "lr": a.lr,

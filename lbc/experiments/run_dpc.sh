@@ -9,7 +9,7 @@ set -x
 
 source env.sh
 
-python run_dpc.py --bsz $BATCH_SIZE --dr $DR_PROGRAM \
-    --num-epochs 2000 --results-dir $RESDIR --num-time-windows 96 \
-    --lr 0.001
+python run_dpc.py --bsz $1 --dr $2 --results-dir $3 \
+    --num-epochs $4  --num-time-windows $5 \
+    --lr $6
 
