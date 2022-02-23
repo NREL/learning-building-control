@@ -124,7 +124,7 @@ def main(**kwargs):
         _ = runner.train_policy()
 
     logger.info("evaluating policy")
-    _ = runner.run()
+    _ = runner.run(batch_size=31)
 
 
 if __name__ == "__main__":
