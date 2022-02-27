@@ -25,6 +25,7 @@ def simulate(
     scenario: Scenario,
     batch_size: int,
     training: bool = True,
+    shuffle: bool = False,
     use_tqdm: bool = False,
     pbar: any = None,
     pbar_epoch: any = None,
@@ -59,7 +60,7 @@ def simulate(
 
     # Make the batch of scenario data.
     batch = scenario.make_batch(
-        batch_size, as_tensor=True, training=training, shuffle=False)
+        batch_size, as_tensor=True, training=training, shuffle=shuffle)
 
     # Useful dimensions.
     bsz, num_time, num_zone = batch.q_solar.shape

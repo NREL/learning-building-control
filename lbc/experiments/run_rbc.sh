@@ -9,5 +9,10 @@ set -x
 
 source env.sh
 
-python run_rbc.py --bsz $1 --dr $2 --results-dir $3
+# For TOU and RTP
+# python run_rbc.py --bsz $1 --dr $2 --results-dir $3 \
+#     --p-flow 1.0 --p-temp 0.8
 
+# For PC
+python run_rbc.py --bsz $1 --dr $2 --results-dir $3 \
+    --p-flow 0.1333  --p-temp 1.0

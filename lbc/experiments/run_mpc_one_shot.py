@@ -29,7 +29,7 @@ class MPCOneShotRunner(PolicyRunner):
 def main(**config):
     
     runner = MPCOneShotRunner(**config)
-    test_data = runner.run()
+    test_data = runner.run(training=config.get("training"))
     
     return save_runner(runner=runner, config=config, test_data=test_data)
 
@@ -51,7 +51,11 @@ if __name__ == "__main__":
         default=0.,
         help="penalty weight for action variance, higher -> more smooth"
     )
-    a = parser.parse_args()
+    parser.add_argument(
+        "--training",
+        action="store_true",
+        help="run MPC against the training scenarios (rather than the test set)"
+    )
 
     # Use the args to construct a full configuration for the experiment.
     config = get_config("MPCOneShot", **vars(a))
