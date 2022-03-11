@@ -28,7 +28,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 
-setup(name='building_control',
+setup(name='learning-building-control',
       version=find_version("lbc", "__init__.py"),
       description='A package for learning building and controllers',
       author='Dave Biagioni',

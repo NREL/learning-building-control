@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import logging
 
+import numpy as np
+
 import torch
 import torch.nn.functional as F
 
@@ -23,6 +25,8 @@ class CostData:
     comfort_cost: torch.tensor
     action_viol_cost: torch.tensor
     pc_violation_cost: torch.tensor
+    imitation_cost: torch.tensor
+    imitation_viol: torch.tensor
 
 
 def stage_cost(
@@ -40,6 +44,7 @@ def stage_cost(
     comfort_max: float,
     pc_penalty: float,  # TODO: @xzhang2, should this be float or tensor?
     pc_limit: float,
+    actions_to_imitate: float,
     device: str = "cpu",
 ) -> torch.tensor:
 
@@ -52,7 +57,7 @@ def stage_cost(
 
     # Chiller power
     chiller_power = (hvac_cop * clipped_action[:, :-1].sum(axis=-1)
-                     * F.relu(temp_oa.squeeze() - action[:, -1]))
+                     * F.relu(temp_oa.squeeze() - clipped_action[:, -1]))
 
     # Total power and power cost
     total_power = fan_power + chiller_power
@@ -71,18 +76,24 @@ def stage_cost(
     action_viol_cost = action_penalty * \
         torch.sum(action_viol_lower.pow(2) + action_viol_upper.pow(2), axis=-1)
 
-    total_cost = power_cost + comfort_cost + action_viol_cost
-
-    # DR power constraint violation
-    if pc_limit is not None:
-        pc_violation = F.relu(total_power - pc_limit)
-        pc_violation_cost = pc_penalty * pc_violation.pow(2)
-    else:
+    imitation_cost, imitation_viol = torch.zeros_like(power_cost), None
+    if actions_to_imitate is not None:
+        imitation_viol = action - actions_to_imitate
+        norm_constant = (action_min + action_max) / 2
+        imitation_cost = torch.sum((imitation_viol / norm_constant).pow(2), axis=-1)
+        total_cost = imitation_cost
         pc_violation_cost = torch.zeros_like(total_cost)
-    total_cost += pc_violation_cost
+    else:
+        total_cost = power_cost + comfort_cost + action_viol_cost
+        if pc_limit is not None:
+            pc_violation = F.relu(total_power - pc_limit)
+            pc_violation_cost = pc_penalty * pc_violation.pow(2)
+        else:
+            pc_violation_cost = torch.zeros_like(total_cost)
+        total_cost += pc_violation_cost
 
     return CostData(
         total_cost, comfort_viol_lower, comfort_viol_upper,
         action_viol_lower, action_viol_upper, action_viol_cost,
         chiller_power, fan_power, total_power, power_cost,
-        comfort_cost, pc_violation_cost)
+        comfort_cost, pc_violation_cost, imitation_cost, imitation_viol)

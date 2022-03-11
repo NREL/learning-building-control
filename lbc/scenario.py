@@ -44,14 +44,18 @@ class Scenario:
         test_end_date: str = "2020-08-31",
         start_time: str = "00:05:00",
         end_time: str = "23:55:00",
-        action_penalty: float = 10.,
-        comfort_penalty: float = 100.,
+        action_penalty: float = 0.,
+        comfort_penalty: float = 10.,
+        control_variance_penalty: float = 0.,
         comfort_band: Union[tuple, np.ndarray] = None,
         zone_temp_init_mean: float = None,
         zone_temp_init_std: float = None,
         data_file: str = None,
         zone_model_file: str = None,
-        dr_program: DRP = DRP('TOU')
+        dr_program: DRP = DRP('TOU'),
+        price_rescale_factor: float = None,
+        actions_to_imitate: any = None,
+        imitation_penalty: float = 0.,
     ):
         """Class for defining training and test scenarios and generating
         samples from them.
@@ -91,9 +95,13 @@ class Scenario:
         self.end_time = end_time
         self.action_penalty = action_penalty
         self.comfort_penalty = comfort_penalty
+        self.control_variance_penalty = control_variance_penalty
         self.zone_temp_init_mean = zone_temp_init_mean
         self.zone_temp_init_std = zone_temp_init_std
         self.dr_program = dr_program
+        self.price_rescale_factor = price_rescale_factor
+        self.actions_to_imitate = actions_to_imitate
+        self.imitation_penalty = imitation_penalty
 
         # Use the pickle file in the data directory by default.
         if zone_model_file is None:
@@ -210,7 +218,7 @@ class Scenario:
         # Create a list of batch dates, optionally shuffled.
         if shuffle:
             random.shuffle(_dates)
-        _dates = _dates[:batch_size]
+        _dates = _dates[:batch_size].copy()
 
         # Create a list of tuples of start and end timestamps.
         start_times = [f"{d} {self.start_time}" for d in _dates]
@@ -221,7 +229,6 @@ class Scenario:
         # Outdoor air temperature.
         temp_oa = np.stack([_df["T_oa"].loc[s:e].values for s, e in times])
         temp_oa = temp_oa if not as_tensor else to_torch(temp_oa)
-
         # Solar irradiance.
         cols = [f"Q_solar_{i+1}" for i in range(5)]
         q_solar = np.array([_df[cols].loc[s:e].values for s, e in times])
@@ -240,19 +247,17 @@ class Scenario:
 
         # Energy price
         if self.dr_program.program_type == 'RTP':
-            energy_price = np.stack([_df["RTP"].loc[s:e].values
-                                     for s, e in times])
-
-            predicted_energy_price = np.stack([_df["DAP"].loc[s:e].values
-                                               for s, e in times])
+            energy_price = np.stack(
+                [_df["RTP"].loc[s:e].values for s, e in times])
+            predicted_energy_price = np.stack(
+                [_df["DAP"].loc[s:e].values for s, e in times])
         else:  # same for both 'TOU' and 'PC'
             energy_price = np.stack([
-                self.dr_program.energy_price.values.squeeze()
-                for s, e in times])
+                self.dr_program.energy_price.values.squeeze() for s, e in times])
             predicted_energy_price = energy_price
 
-        energy_price = energy_price if not as_tensor else to_torch(
-            energy_price)
+        # Convert prices to tensor
+        energy_price = energy_price if not as_tensor else to_torch(energy_price)
         predicted_energy_price = predicted_energy_price \
             if not as_tensor else to_torch(predicted_energy_price)
 
@@ -269,5 +274,10 @@ class Scenario:
             zone_temp = np.array([_df[cols].loc[s].values for s, _ in times])
         zone_temp = zone_temp if not as_tensor else to_torch(zone_temp)
 
+        actions = None
+        if self.actions_to_imitate is not None:
+            actions = to_torch(self.actions_to_imitate)
+
         return Batch(temp_oa, q_solar, q_cool, zone_temp, comfort_min,
-                     comfort_max, energy_price, predicted_energy_price)
+                     comfort_max, energy_price, predicted_energy_price,
+                     actions)

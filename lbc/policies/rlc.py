@@ -7,7 +7,7 @@ import ray
 
 from typing import Tuple
 
-from ray.rllib.agents.registry import get_agent_class
+from ray.rllib.agents.registry import get_trainer_class
 from ray.tune.registry import register_env
 
 from lbc.building_env import BuildingControlEnv
@@ -37,6 +37,7 @@ class RLCPolicy(Policy):
     def __init__(
         self,
         device: str = "cpu",
+        node_ip_address: str = None,
         **kwargs
     ):
 
@@ -46,7 +47,10 @@ class RLCPolicy(Policy):
         self.rllib_policies = {}
 
         # Use your own LAN IP below, needed if on VPN.
-        ray.init(_node_ip_address='192.168.0.36')
+        if node_ip_address is not None:
+            ray.init(_node_ip_address=node_ip_address)
+        else:
+            ray.init()
 
         def get_env_creator(dr_program):
             def env_creator(config):
@@ -80,7 +84,7 @@ class RLCPolicy(Policy):
         if "num_workers" in config:
             config["num_workers"] = min(1, config["num_workers"])
 
-        cls = get_agent_class('PPO')
+        cls = get_trainer_class('PPO')
         agent = cls(env=env_name, config=config)
         agent.restore(checkpoint)
 
@@ -239,7 +243,7 @@ if __name__ == '__main__':
 
     from lbc.simulate import simulate
 
-    rl_policy = RLCPolicy()
+    rl_policy = RLCPolicy(node_ip_address="192.168.0.36")
     drp = DRP('RTP')
     s = Scenario(dr_program=drp)
 

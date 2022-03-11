@@ -14,6 +14,8 @@ from lbc.scenario import Scenario
 from lbc.rollout import Rollout
 from lbc.utils import to_torch
 
+from tqdm import tqdm
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ def simulate(
     scenario: Scenario,
     batch_size: int,
     training: bool = True,
+    shuffle: bool = False,
     use_tqdm: bool = False,
     pbar: any = None,
     pbar_epoch: any = None,
@@ -57,7 +60,7 @@ def simulate(
 
     # Make the batch of scenario data.
     batch = scenario.make_batch(
-        batch_size, as_tensor=True, training=training, shuffle=True)
+        batch_size, as_tensor=True, training=training, shuffle=shuffle)
 
     # Useful dimensions.
     bsz, num_time, num_zone = batch.q_solar.shape
@@ -110,7 +113,7 @@ def simulate(
         # What each class does with them is up to the user.
         action, policy_meta = policy(
             scenario=scenario, batch=batch, t=t, u=u,
-            x=x, zone_temp=zone_temp,  action_init=action_init,
+            x=x, zone_temp=zone_temp, action_init=action_init,
             training=training, **policy_kwargs
         )
 
@@ -129,7 +132,8 @@ def simulate(
 
         # Get current values of exogenous data and energy price.
         (temp_oa, q_solar, comfort_min, comfort_max, energy_price,
-         predicted_energy_price) = batch.get_time(t, device=device)
+         predicted_energy_price, actions_to_imitate) = \
+             batch.get_time(t, device=device)
 
         # Set power constraint limit and penalty depending on whether we're
         # using that demand response program.
@@ -158,6 +162,7 @@ def simulate(
             comfort_penalty=scenario.comfort_penalty,
             pc_penalty=pc_penalty,
             pc_limit=pc_limit,
+            actions_to_imitate=actions_to_imitate if training else None,
             device=device)
 
         # Evolve the "true" dynamics given the (clipped) action, current
@@ -186,6 +191,7 @@ def simulate(
             action_min=action_min,
             action_max=action_max,
             comfort_viol_deg_hr=comfort_viol_deg_hr,
+            q_solar=q_solar,
             **cost_data.__dict__
         )
 
@@ -201,19 +207,19 @@ def simulate(
 
         # Optionally update the progress bar from calling scope.
         if pbar is not None:
-            _loss = total_loss.mean().item() / num_time
+            _loss = total_loss.item()
             pbar_loss = pbar_loss if pbar_loss is not None else np.inf
             pbar.set_description(
                 f"epoch={pbar_epoch}|loss={pbar_loss:1.3e}"
                 + f"|step={t+1}/{num_time}|{_loss:1.3e}")
 
     # Average loss per time step
-    total_loss /= num_time
+    # total_loss /= num_time
 
     # Stack the arrays in the rollout data
     rollout.finalize()
 
     # Add cpu time to policy metadata
-    policy_meta = {"cpu_time": time.time() - tic}
+    policy_meta.update({"cpu_time": time.time() - tic})
 
     return total_loss, rollout, policy_meta

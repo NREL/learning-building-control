@@ -1,7 +1,6 @@
 import logging
 
-from lbc.experiments.runner import PolicyRunner, SCENARIO_DEFAULT
-from lbc.experiments.runner import SCENARIO_TEST
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 
@@ -10,34 +9,47 @@ logger = logging.getLogger(__file__)
 
 class RLCRunner(PolicyRunner):
 
-    def run_policy(self, policy):
+    @property
+    def name(self):
+        return f"RLC-{self.dr_program}" + self.name_ext
+
+    def run_policy(self, batch_size=None, training=False):
+
+        batch_size = batch_size if batch_size is not None else self.batch_size
+
         loss, rollout, meta = simulate(
-            policy=policy, scenario=self.scenario, batch_size=self.batch_size)
+            policy=self.policy, scenario=self.scenario, batch_size=batch_size,
+            training=training)
+
         return loss, rollout, meta
 
 
-def main(**kwargs):
-    runner = RLCRunner(**kwargs)
-    runner.run()
+def main(**config):
+    runner = RLCRunner(**config)
+    test_data = runner.run()
+    # We can't pickle the rllib trainer, so we delete the policy before
+    # saving -- we can always reload it using the rllib interface.
+    runner.policy = None
+    return save_runner(runner=runner, config=config, test_data=test_data)
 
 
 if __name__ == "__main__":
 
-    from lbc.experiments.runner import parser
+    from lbc.experiments.runner import get_parser
+    from lbc.experiments.config import get_config
 
+    parser = get_parser()
+    parser.add_argument(
+        "--node-ip-address",
+        type=str,
+        default=None,
+        help="node IP address for ray (needed if running with VPN)"
+    )
     a = parser.parse_args()
 
     # Use the args to construct a full configuration for the experiment.
-    config = {
-        "name": f"RLC-{a.dr_program}",
-        "policy_type": "RLC",
-        "dr_program": a.dr_program,
-        "batch_size": a.batch_size,
-        "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {},
-        "training": False,
-        "dry_run": a.dry_run
-    }
-    print("ARGS:", config)
+    config = get_config("RLC", **vars(a))
+    config["policy_config"]["node_ip_address"] = a.node_ip_address
+    logger.info(f"CONFIG: {config}")
 
     _ = main(**config)

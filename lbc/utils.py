@@ -1,3 +1,4 @@
+from importlib.metadata import requires
 from typing import Union
 from numbers import Number
 
@@ -6,8 +7,11 @@ import numpy as np
 import torch
 
 
-def to_torch(x: Union[list, np.ndarray],
-             batch_size: int = None) -> torch.tensor:
+def to_torch(
+    x: Union[list, np.ndarray],
+    batch_size: int = None,
+    requires_grad: bool = False
+) -> torch.tensor:
     """Converts a number, list, or array to (optionally batched / broadcasted)
     torch tensor."""
 

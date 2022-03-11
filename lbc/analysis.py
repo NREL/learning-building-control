@@ -41,7 +41,7 @@ def summarize_rollout(
 
 
 def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
-               ax=None, figsize=(8, 4)):
+               ax=None, figsize=(5, 3)):
 
     if key == "zone_flow":
         data = rollout.data["clipped_action"][:, :, :-1]
@@ -78,8 +78,10 @@ def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
             x=index, y1=y1[i], y2=y2[i], alpha=0.2, color=colors[i])
 
     if secondary is not None and secondary in rollout.data.keys():
+        _y = rollout.data[secondary]
+        _y = _y.mean(-1) if np.ndim(_y) > 1 else _y
         _x = pd.DataFrame(
-            rollout.data[secondary].mean(-1), columns=[secondary], index=index)
+            _y, columns=[secondary], index=index)
         _x.plot(secondary_y=True, ax=ax, linestyle=":", c="k")
 
     if key == "zone_temp":
@@ -92,4 +94,55 @@ def plot_stats(rollout, key, cmap=cm.brg, cols=None, secondary=None,
         comfort_min.plot(ax=ax, linestyle=":", c="k")
         comfort_max.plot(ax=ax, linestyle=":", c="k")
 
+    plt.tight_layout()
+
     return fig, ax
+
+def run_analysis(rollout, dr, figsize=(6, 2), secondary=False):
+    
+    assert dr in ["TOU", "PC", "RTP"]
+
+    df = summarize_rollout(rollout)
+    
+    if secondary is True:
+        if dr == "PC":
+            secondary = "pc_limit"
+        else:
+            secondary = "energy_price"
+    
+    keys = [
+        "zone_temp",
+        "discharge_temp",
+        "zone_flow",
+        "total_cost",
+        "total_power",
+        "fan_power",
+        "chiller_power", 
+        "comfort_viol_deg_hr"
+    ]
+    
+    figs = {}
+    for key in keys:
+        s = None if key == "zone_temp" else secondary
+        fig, ax = plot_stats(rollout, key, figsize=figsize, secondary=s)
+        ax.set_title(key)
+        figs[key] = (fig, ax)
+        
+    return rollout, df, figs
+
+
+def plot_costs(rollout, figsize=(6, 10), secondary=None):
+
+    df = summarize_rollout(rollout)
+
+    keys = [k for k in rollout.data.keys() if k.endswith("cost")]
+
+    fig, ax = plt.subplots(len(keys))
+    fig.set_size_inches(figsize)
+    for i, key in enumerate(keys):
+        _ = plot_stats(rollout, key, figsize=figsize, secondary=secondary, ax=ax[i])
+        tot = rollout.data[key].sum(0).mean(-1)
+        ax[i].set_title(f"{key} ({tot:.3f})")
+    plt.tight_layout()
+
+    return rollout, df, fig

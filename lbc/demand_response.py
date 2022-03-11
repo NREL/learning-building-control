@@ -35,7 +35,7 @@ class DemandResponseProgram:
                 'dr_end_time': '17:00:00',
                 'program_type': 'PC',
                 'program_specific': {
-                    'p_limit_dr': 10.,
+                    'p_limit_dr': 15.,
                     'p_limit_nondr': 25.,
                     'base_price': 1.,
                     'pc_penalty': 10.,

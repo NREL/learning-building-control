@@ -37,8 +37,8 @@ class MPC:
         linearize: bool = False,
         wrap_horizon: bool = False,
         solver: str = "ipopt",
-        bilinear_eps: float = 1e-2,
         energy_price: np.ndarray = None,
+        action_sequence: np.ndarray = None,
         **kwargs
     ):
 
@@ -55,8 +55,8 @@ class MPC:
         self.linearize = linearize
         self.solver = solver
         self.wrap_horizon = wrap_horizon
-        self.bilinear_eps = bilinear_eps
         self.energy_price = energy_price
+        self.action_sequence = action_sequence
 
         if linearize is True and action_init is None:
             raise ValueError("Using linearized model requires initial"
@@ -77,6 +77,7 @@ class MPC:
         self.zone_neighbors = self.zone_model["u_neighbor"]
 
         self.mpc = self.create_model()
+
 
     def create_model(self) -> pyo.ConcreteModel:
 
@@ -180,8 +181,8 @@ class MPC:
             m.q_cooling_cons = pyo.Constraint(
                 m.time_control, m.zone,
                 rule=lambda m, t, z:
-                    m.u[t, z, 1] == m.action[t, z] * (m.action[t, N]
-                                                      - m.zone_temp[t, z]))
+                    m.u[t, z, 1] == m.action[t, z] * (
+                        m.action[t, N] - m.zone_temp[t, z]))
 
         # This feature is the difference between current zone and the selected
         # neighbor zone.
@@ -202,7 +203,8 @@ class MPC:
             rule=lambda m, t:
                 m.fan_power[t] == (
                     fan_coeff_1 * sum(m.action[t, z] for z in m.zone) ** 3
-                    + fan_coeff_2))
+                    + fan_coeff_2)
+        )
 
         # P_consumed is the fan power plus q_hvac
         if self.linearize:
@@ -216,8 +218,8 @@ class MPC:
             m.chiller_power_cons = pyo.Constraint(
                 m.time_control, rule=lambda m, t:
                     m.chiller_power[t] == hvac_cop
-                    * sum(m.action[t, z] for z in m.zone)
-                    * (m.temp_oa[t] - m.action[t, N])
+                        * sum(m.action[t, z] for z in m.zone)
+                        * (m.temp_oa[t] - m.action[t, N])
             )
             m.p_consumed_cons = pyo.Constraint(
                 m.time_control, rule=lambda m, t:
@@ -239,9 +241,8 @@ class MPC:
 
         # x: state variable which (as far as I can tell) is a rescaling of the
         # zone temperatures (?)
-        m.x_init_cons = pyo.Constraint(m.zone,
-                                       rule=lambda m, z:
-                                       m.x[0, z] == x_init[z])
+        m.x_init_cons = pyo.Constraint(
+            m.zone, rule=lambda m, z: m.x[0, z] == x_init[z])
 
         def x_rule(m, t, z):
             return m.x[t, z] == zm["A"][z] * m.x[t-1, z] \
@@ -258,28 +259,46 @@ class MPC:
                     zm["mean_output"][z]
         m.zone_temp_cons = pyo.Constraint(m.time, m.zone, rule=zone_temp_rule)
 
+        # Optionally fix the actions to verify cost functions
+        if self.action_sequence is not None:
+            m.fixed_action_cons = pyo.Constraint(
+                m.time, m.control,
+                rule=lambda m, t, z: 
+                    m.action[t, z] == self.action_sequence[t, z])
+
         if self.dr_program.program_type == 'PC':
             m.power_viol = pyo.Var(m.time, domain=pyo.NonNegativeReals)
             m.power_viol_cons = pyo.Constraint(
                 m.time,
                 rule=lambda m, t: m.p_consumed[t] - m.power_viol[t]
-                <= self.dr_program.power_limit.values[t][0])
-
-        delta_t = self.zone_model['delta_t']
+                    <= self.dr_program.power_limit.values[wrapped_index[t]][0]
+            )
 
         def cost_rule(m):
-            _idx = wrapped_index
-            power_cost = sum(self.energy_price[_idx[t]]
-                             * m.p_consumed[t] for t in m.time) * delta_t
+
+            delta_t = self.zone_model['delta_t']
+
+            power_cost = delta_t * sum(
+                self.energy_price[wrapped_index[t]] * m.p_consumed[t] for t in m.time)
+            
+            control_energy_cost = \
+                self.scenario.control_variance_penalty \
+                    * sum((m.action[t, c] - m.action[t-1, c])**2 
+                        for t in m.time_not_init for c in m.control)
+
             discomfort_cost = self.scenario.comfort_penalty * sum(
                 m.comfort_viol_lower[t, z]**2 + m.comfort_viol_upper[t, z]**2
-                for t in m.time for z in m.zone)
-            cost = power_cost + discomfort_cost
+                    for t in m.time for z in m.zone)
+
+            cost = power_cost + discomfort_cost + control_energy_cost
 
             if self.dr_program.program_type == 'PC':
+
                 power_violation_cost = self.dr_program.pc_penalty * sum(
                     m.power_viol[t]**2 for t in m.time)
+                
                 cost += power_violation_cost
+
             return cost
 
         # Set the cost, using the supplied objective if available
@@ -343,6 +362,7 @@ class MPCPolicy(Policy):
         linearize: bool = False,
         one_shot: bool = False,
         solver: str = "ipopt",
+        tee: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -351,9 +371,13 @@ class MPCPolicy(Policy):
         self.linearize = linearize
         self.one_shot = one_shot
         self.solver = solver
+        self.tee = tee
+
+        self.action_sequence = kwargs.get("action_sequence")
 
         self.cached_actions = None
         self.cached_dfs = []
+
 
     def __call__(
         self,
@@ -392,9 +416,9 @@ class MPCPolicy(Policy):
         temp_oa = batch.temp_oa.detach().numpy()
         q_solar = batch.q_solar.detach().numpy()
         if self.one_shot:
-            batch_energy_price = batch.energy_price.detach().numpy()
+            batch_energy_price = batch.energy_price.detach().numpy().copy()
         else:
-            batch_energy_price = batch.predicted_energy_price.detach().numpy()
+            batch_energy_price = batch.predicted_energy_price.detach().numpy().copy()
         x = x.detach().numpy()
         zone_temp = zone_temp.detach().numpy()
 
@@ -408,39 +432,46 @@ class MPCPolicy(Policy):
 
                 return self.cached_actions[:, t, :], {"df": self.cached_dfs}
 
+            # Get the data for each sample.
+            _temp_oa = temp_oa[b, :].squeeze()
+            _q_solar = q_solar[b, :, :].squeeze().T
+            _zone_temp = zone_temp[b, :].squeeze()
+            _x = x[b, :].squeeze()
+            _action_init = action_init[b, :].squeeze() \
+                if action_init is not None else None
+
+            energy_price = batch_energy_price[b, :].squeeze()
+
+            # Create the MPC model instance.
+            action_sequence = None
+            if self.action_sequence is not None:
+                action_sequence = self.action_sequence[:, b, :]
+
+            mpc = MPC(
+                zone_model=scenario.zone_model,
+                scenario=scenario, 
+                step_idx=t,
+                num_lookahead_steps=la_steps,
+                temp_oa=_temp_oa,
+                q_solar=_q_solar,
+                zone_temp_init=_zone_temp,
+                x_init=_x,
+                action_init=_action_init,
+                linearize=self.linearize,
+                solver=self.solver,
+                energy_price=energy_price,
+                action_sequence=action_sequence)
+
+            # Solve the MPC problem and extract the first action.
+            df = mpc.solve(tee=self.tee)
+            action = df[["flow_0", "flow_1", "flow_2", "flow_3", "flow_4",
+                            "discharge_temp"]]
+
+            if self.one_shot:
+                action = action.values
+                self.cached_dfs.append(df.copy())
             else:
-
-                # Get the data for each sample.
-                _temp_oa = temp_oa[b, :].squeeze()
-                _q_solar = q_solar[b, :, :].squeeze().T
-                _zone_temp = zone_temp[b, :].squeeze()
-                _x = x[b, :].squeeze()
-                _action_init = action_init[b, :].squeeze() \
-                    if action_init is not None else None
-
-                energy_price = batch_energy_price[b, :].squeeze()
-
-                # Create the MPC model instance.
-                mpc = MPC(
-                    zone_model=scenario.zone_model,
-                    scenario=scenario, step_idx=t,
-                    num_lookahead_steps=la_steps,
-                    temp_oa=_temp_oa, q_solar=_q_solar,
-                    zone_temp_init=_zone_temp, x_init=_x,
-                    action_init=_action_init, linearize=self.linearize,
-                    solver=self.solver, bilinear_eps=1,
-                    energy_price=energy_price)
-
-                # Solve the MPC problem and extract the first action.
-                df = mpc.solve()
-                action = df[["flow_0", "flow_1", "flow_2", "flow_3", "flow_4",
-                             "discharge_temp"]]
-
-                if self.one_shot:
-                    action = action.values
-                    self.cached_dfs.append(df.copy())
-                else:
-                    action = action.values[0, :].squeeze()
+                action = action.values[0, :].squeeze()
 
             torch_actions.append(to_torch(action))
 
@@ -464,12 +495,16 @@ class MPCOneShotPolicy(Policy):
         self,
         linearize: bool = False,
         solver: str = "ipopt",
+        tee: bool = False,
         **kwargs
     ):
         super().__init__()
 
         self.linearize = linearize
-        self.mpc = MPCPolicy(linearize=linearize, one_shot=True, solver=solver)
+        self.mpc = MPCPolicy(
+            linearize=linearize, one_shot=True, solver=solver, tee=tee,
+            **kwargs)
+
 
     def __call__(self, *args, **kwargs) -> Tuple[torch.tensor, dict]:
 

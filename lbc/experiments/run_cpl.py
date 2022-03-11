@@ -1,13 +1,12 @@
 import logging
-
-import numpy as np
+import os
+import time
 
 from tqdm import tqdm
 
 import torch
 
-from lbc.experiments.runner import PolicyRunner, SCENARIO_DEFAULT
-from lbc.experiments.runner import SCENARIO_TEST
+from lbc.experiments.runner import PolicyRunner, save_runner
 from lbc.simulate import simulate
 
 
@@ -16,106 +15,130 @@ logger = logging.getLogger(__name__)
 
 class CPLRunner(PolicyRunner):
 
-    def run_policy(self, policy):
 
-        use_value_function = self.policy_config["use_value_function"]
-        value_interval = self.policy_config["num_value_interval_steps"]
-        num_epochs = self.policy_config["num_epochs"]
-        batch_size = self.batch_size
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
 
         # Initialize the value function tensors
-        num_intervals = self.scenario.num_episode_steps // value_interval + 1
-        q = torch.zeros(
-            (5, num_intervals), dtype=torch.float32, requires_grad=True)
-        Q_sqrt = torch.zeros(
-            (5, 5, num_intervals), dtype=torch.float32, requires_grad=True)
+        self.q = torch.zeros(
+            (5, self.policy.num_time_windows), dtype=torch.float32, requires_grad=True)
+        self.Q_sqrt = torch.zeros(
+            (5, 5, self.policy.num_time_windows), dtype=torch.float32, requires_grad=True)
 
-        opt = torch.optim.Adam([q, Q_sqrt], lr=self.policy_config["lr"])
 
-        # Set to None if not unused
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(opt,
-                                                         milestones=[33, 66],
-                                                         gamma=0.1)
+    @property
+    def name(self):
+        la = self.policy_config["lookahead"]
+        uvf = self.policy_config["use_value_function"]
+        ntw = self.policy_config["num_time_windows"]
+        return f"CPL-{self.dr_program}-{la}-{ntw}-{uvf}" + self.name_ext
+
+
+    def train_policy(self):
+
+        # Convenient references
+        policy = self.policy
+        use_value_function = self.policy_config["use_value_function"]
+        num_epochs = self.policy_config["num_epochs"]
+        num_episode_steps = self.scenario.num_episode_steps
+        batch_size = self.batch_size
+
+        opt = torch.optim.Adam([self.q, self.Q_sqrt], lr=self.policy_config["lr"])
 
         # If not learning the value function, we'll just run once against the
         # test set.
         num_epochs = num_epochs if use_value_function else 1
 
         # Main loop
-        best_test_loss = np.inf
-        best_model = None
         losses = []
         test_losses = []
+        tic = time.time()
         pbar = tqdm(range(num_epochs))
         for epoch in pbar:
 
             try:
 
-                if use_value_function:
-                    # If learning the value function, run simulation and do
-                    # gradient update
-                    total_loss, _, _ = simulate(
-                        policy=policy, scenario=self.scenario,
-                        batch_size=self.batch_size, q=q, Q_sqrt=Q_sqrt)
+                # If learning the value function, run simulation and do
+                # gradient update
+                loss, rollout, meta = simulate(
+                    policy=policy, scenario=self.scenario, batch_size=self.batch_size, 
+                    training=True, shuffle=True, q=self.q, Q_sqrt=self.Q_sqrt)
 
-                    loss = total_loss.mean()
+                # Take mean and normalize
+                loss = loss.mean()
+                opt_loss = loss / num_episode_steps
 
-                    opt.zero_grad()
-                    loss.backward()
-                    opt.step()
-
-                    losses.append(loss.detach().numpy())
-
-                else:
-                    logger.info(
-                        "With use_value_function=False we only run one epoch"
-                        + " against the test set. Training loss will be nan"
-                        + " here (expected)."
-                    )
-                    total_loss = None
-                    losses.append(np.nan)
+                # Gradient step
+                opt.zero_grad()
+                opt_loss.backward()
+                opt.step()
 
                 # Evaluate on the test set
-                test_total_loss, test_rollout, meta = simulate(
-                    policy=policy, scenario=self.scenario,
-                    batch_size=min(batch_size, 31),
-                    training=False, q=q, Q_sqrt=Q_sqrt)
-                test_loss = test_total_loss.mean()
+                test_loss, _, _ = simulate(
+                    policy=policy, scenario=self.scenario, batch_size=31,
+                    training=False, q=self.q, Q_sqrt=self.Q_sqrt)
+                test_loss = test_loss.mean()
+
+                # Update loss traces
+                losses.append(loss.detach().numpy())
                 test_losses.append(test_loss.detach().numpy())
 
-                scheduler.step(test_loss)
-
-                if test_losses[-1] < best_test_loss:
-                    best_test_loss = test_losses[-1]
-                    best_model = [q.clone().detach(), Q_sqrt.clone().detach()]
-
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f},"
-                    + f" {scheduler._last_lr[0]:1.3e}")
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}")
 
             except KeyboardInterrupt:
                 logger.info("stopped")
                 break
 
         meta.update({
-            "best_test_loss": best_test_loss,
-            "best_model": best_model,
+            "model": [self.q.clone().detach(), self.Q_sqrt.clone().detach()],
             "losses": losses,
-            "test_losses": test_losses
+            "test_losses": test_losses,
+            "train_time": time.time() - tic
         })
 
-        return test_total_loss, test_rollout, meta
+        # Save results
+        #self.save(rollout, meta, loss, cpu_time, name_suffix="train")
+
+        return loss, rollout, meta
 
 
-def main(**kwargs):
-    runner = CPLRunner(**kwargs)
-    runner.run()
+    def run_policy(self, batch_size=None, training=False):
+
+        batch_size = batch_size if batch_size is not None else self.batch_size
+        
+        loss, rollout, meta = simulate(
+            policy=self.policy, scenario=self.scenario, batch_size=batch_size,
+            training=training, q=self.q, Q_sqrt=self.Q_sqrt)
+        
+        return loss, rollout, meta
+
+
+def main(**config):
+    
+    runner = CPLRunner(**config)
+    
+    train_data = None
+    policy_config = config.get("policy_config", {})
+    if "use_value_function" in policy_config and policy_config["use_value_function"] == 1:
+        logger.info("starting training run")
+        train_data = runner.train_policy()
+
+    logger.info("evaluating policy")
+    test_data = runner.run(batch_size=31)
+
+    return save_runner(runner=runner, config=config, test_data=test_data, 
+        train_data=train_data)
+
 
 
 if __name__ == "__main__":
 
-    from lbc.experiments.runner import parser
+    from lbc.experiments.runner import get_parser
+    from lbc.experiments.config import get_config
 
+    parser = get_parser()
     parser.add_argument(
         "--lookahead",
         type=int,
@@ -129,10 +152,10 @@ if __name__ == "__main__":
         help="learn a value function (1=yes, 0=no)"
     )
     parser.add_argument(
-        "--num-value-interval-steps",
+        "--num-time-windows",
         type=int,
-        default=1,
-        help="steps per value function interval"
+        default=24,
+        help="number of time windows to use in modeling value function"
     )
     parser.add_argument(
         "--lr",
@@ -148,23 +171,15 @@ if __name__ == "__main__":
     )
     a = parser.parse_args()
 
-    # Use the args to construct a full configuration for the experiment.
-    config = {
-        "name": f"CPL-{a.dr_program}-N={a.lookahead}-V={a.use_value_function}",
-        "policy_type": "CPL",
-        "batch_size": a.batch_size,
-        "dr_program": a.dr_program,
-        "scenario_config": SCENARIO_TEST if a.dry_run else SCENARIO_DEFAULT,
-        "policy_config": {
-            "lookahead": a.lookahead,
-            "lr": a.lr,
-            "num_epochs": a.num_epochs,
-            "use_value_function": a.use_value_function,
-            "num_value_interval_steps": a.num_value_interval_steps,
-        },
-        "training": bool(a.use_value_function),
-        "dry_run": a.dry_run
+    config = get_config("CPL", **vars(a))
+    config["policy_config"] = {
+        "lookahead": a.lookahead,
+        "lr": a.lr,
+        "num_epochs": a.num_epochs,
+        "use_value_function": a.use_value_function,
+        "num_time_windows": a.num_time_windows,
     }
-    print("ARGS:", config)
 
+    logger.info(f"CONFIG: {config}")
+    
     _ = main(**config)

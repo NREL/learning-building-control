@@ -24,7 +24,8 @@ class Batch:
         comfort_min: any = None,
         comfort_max: any = None,
         energy_price: any = None,
-        predicted_energy_price: any = None
+        predicted_energy_price: any = None,
+        actions_to_imitate: any = None
     ):
 
         # These are used only for initial conditions (if at all)
@@ -38,6 +39,7 @@ class Batch:
         self.comfort_max = comfort_max
         self.energy_price = energy_price
         self.predicted_energy_price = predicted_energy_price
+        self.actions_to_imitate = actions_to_imitate
 
     def get_time(
         self,
@@ -57,6 +59,10 @@ class Batch:
         energy_price = self.energy_price[:, t].unsqueeze(-1).to(device)
         predicted_price = self.predicted_energy_price[:, t]
         predicted_energy_price = predicted_price.unsqueeze(-1).to(device)
+        
+        actions = None
+        if self.actions_to_imitate is not None:
+            actions = self.actions_to_imitate[:, t, :].to(device)
 
         return (temp_oa, q_solar, comfort_min, comfort_max,
-                energy_price, predicted_energy_price)
+                energy_price, predicted_energy_price, actions)
