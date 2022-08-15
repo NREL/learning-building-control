@@ -47,7 +47,6 @@ class RLCPolicy(Policy):
         super().__init__()
 
         self.device = device
-        self.rllib_policies = {}
         self.num_lookahead_steps = num_lookahead_steps
 
         # Use your own LAN IP below, needed if on VPN.
@@ -70,9 +69,7 @@ class RLCPolicy(Policy):
                         + str(self.num_lookahead_steps) + 'Env-v0')
             register_env(env_name, get_env_creator(dr_program))
 
-            self.rllib_policies[dr_program] = self.get_trained_rllib_agent(
-                env_name, POLICY_CHECKPOINTS[dr_program]
-            )
+        self.rl_agent = None
 
     def get_trained_rllib_agent(self, env_name, checkpoint):
         # Load configuration from file
@@ -130,7 +127,11 @@ class RLCPolicy(Policy):
 
         dr_program = scenario.dr_program.program_type
 
-        rl_agent = self.rllib_policies[dr_program]
+        if self.rl_agent is None:
+            env_name = ('BuildingControl' + dr_program
+                        + str(self.num_lookahead_steps) + 'Env-v0')
+            self.rl_agent = self.get_trained_rllib_agent(
+                env_name, POLICY_CHECKPOINTS[dr_program])
 
         obs = self.assemble_rl_state(scenario, x, zone_temp, t, batch,
                                      dr_program)
@@ -138,7 +139,7 @@ class RLCPolicy(Policy):
         bsz, _ = zone_temp.shape
         batch_action = []
         for i in range(bsz):
-            rl_action = rl_agent.compute_action(obs[i, :])
+            rl_action = self.rl_agent.compute_action(obs[i, :])
             # Mapping actions from [-1, 1] to actual feasible range.
             rl_action = np.array([(x + 1) / 2 for x in rl_action])
             rl_action = scenario.action_min + rl_action * (
