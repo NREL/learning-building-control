@@ -29,8 +29,8 @@ POLICY_CHECKPOINTS = {
     #                     'real_time_pricing/checkpoint/checkpoint'),
     # 'TOU': os.path.join(THIS_DIR, 'rlc_checkpoints',
     #                     'time_of_use/checkpoint/checkpoint'),
-    'TOU': '/Users/xzhang2/CodeRepo/learning-building-control/lbc/results/BuildingControlTOU24Env-v0/PPO_BuildingControlTOU24Env-v0_91656_00000_100_0_2022-08-14_13-59-12/checkpoint_000515/checkpoint-515',
-    'RTP': '/Users/xzhang2/CodeRepo/learning-building-control/lbc/results/BuildingControlRTP24Env-v0/PPO_BuildingControlRTP24Env-v0_655ee_00000_370_0_2022-08-14_18-37-09/checkpoint_000506/checkpoint-506'
+    'TOU-24': '/Users/xzhang2/CodeRepo/learning-building-control/lbc/results/BuildingControlTOU24Env-v0/PPO_BuildingControlTOU24Env-v0_91656_00000_100_0_2022-08-14_13-59-12/checkpoint_000515/checkpoint-515',
+    'RTP-24': '/Users/xzhang2/CodeRepo/learning-building-control/lbc/results/BuildingControlRTP24Env-v0/PPO_BuildingControlRTP24Env-v0_655ee_00000_370_0_2022-08-14_18-37-09/checkpoint_000506/checkpoint-506'
 }
 
 
@@ -64,7 +64,7 @@ class RLCPolicy(Policy):
                 return env
             return env_creator
 
-        for dr_program in POLICY_CHECKPOINTS.keys():
+        for dr_program in ['TOU', 'RTP', 'PC']:
             env_name = ('BuildingControl' + dr_program
                         + str(self.num_lookahead_steps) + 'Env-v0')
             register_env(env_name, get_env_creator(dr_program))
@@ -131,7 +131,9 @@ class RLCPolicy(Policy):
             env_name = ('BuildingControl' + dr_program
                         + str(self.num_lookahead_steps) + 'Env-v0')
             self.rl_agent = self.get_trained_rllib_agent(
-                env_name, POLICY_CHECKPOINTS[dr_program])
+                env_name,
+                POLICY_CHECKPOINTS[dr_program + '-'
+                                   + str(self.num_lookahead_steps)])
 
         obs = self.assemble_rl_state(scenario, x, zone_temp, t, batch,
                                      dr_program)
