@@ -5,15 +5,21 @@ import numpy as np
 
 from ray import tune
 from ray.tune.registry import register_env
+from ray.rllib.models import ModelCatalog
+from ray.rllib.utils import try_import_tf
 
 from lbc.building_env import BuildingControlEnv
 from lbc.demand_response import DemandResponseProgram as DRP
 from lbc.scenario import Scenario
 
+from custom_model import get_customized_model
+
+tf1, tf, tfv = try_import_tf()
+
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOG_PATH = os.path.join(parent_dir, 'results/')  # LOCAL
-# LOG_PATH = os.path.join('/scratch/xzhang2/', 'lbc/')  # HPC
+# LOG_PATH = os.path.join(parent_dir, 'results/')  # LOCAL
+LOG_PATH = os.path.join('/scratch/xzhang2/', 'lbc/')  # HPC
 
 
 def main():
@@ -39,11 +45,12 @@ def main():
                 + str(args.num_lookahead_steps) + 'Env-v0')
 
     if args.redis_password is None:
-        # Single node
-        # ray.init(_temp_dir="/tmp/scratch/ray")
-        ray.init(_node_ip_address='192.168.0.16')
+        # Single HPC node
+        ray.init(_temp_dir="/tmp/scratch/ray")
+        # # Local machine
+        # ray.init(_node_ip_address='192.168.0.16')
     else:
-        # On a cluster
+        # On an HPC cluster
         ray.init(_redis_password=args.redis_password,
                  address=args.ip_head)
 
@@ -55,6 +62,10 @@ def main():
         return env
 
     register_env(env_name, env_creator)
+    obs_dim = env_creator(None).observation_space.shape[0]
+    custom_model = get_customized_model(obs_dim, [128, 128],
+                                        tf.nn.relu, tf.sigmoid)
+    ModelCatalog.register_custom_model("customized_model", custom_model)
 
     algo_specific_config = {
         'ES': {
@@ -71,7 +82,10 @@ def main():
     config = {
         "env": env_name,
         "model": {
+            # Use the default network model
             "fcnet_hiddens": [128, 128],
+            # # Use a customized network when using PPO algorithm.
+            # "custom_model": "customized_model"
         },
         "num_workers": args.num_workers,
     }
