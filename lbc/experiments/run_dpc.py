@@ -14,14 +14,12 @@ logger = logging.getLogger(__file__)
 
 
 class DPCRunner(PolicyRunner):
-    
 
     @property
     def name(self):
         lr = self.policy_config["lr"]
-        nw = self.policy_config["model_config"]["num_time_windows"]
-        return f"DPC-{self.dr_program}-{nw}-{lr:0.3f}" + self.name_ext
-
+        la = self.policy.num_lookahead_steps
+        return f"DPC-{self.dr_program}-{la}-{lr:0.3f}" + self.name_ext
 
     def train_policy(self, **kwargs):
 
@@ -32,7 +30,8 @@ class DPCRunner(PolicyRunner):
 
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #     opt, factor=0.5, patience=10, cooldown=10)
-        # scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=500, gamma=np.sqrt(.1))
+        # scheduler = torch.optim.lr_scheduler.StepLR(
+        #     opt, step_size=500, gamma=np.sqrt(.1))
 
         losses = []
         test_losses = []
@@ -42,8 +41,8 @@ class DPCRunner(PolicyRunner):
             try:
                 # Simulate on the training set and perform gradient update
                 loss, rollout, meta = simulate(
-                    policy=policy, scenario=self.scenario, batch_size=self.batch_size,
-                    training=True)
+                    policy=policy, scenario=self.scenario,
+                    batch_size=self.batch_size, training=True)
 
                 loss = loss.mean()
 
@@ -58,8 +57,8 @@ class DPCRunner(PolicyRunner):
 
                 # # Evaluate on the test set for monitoring
                 test_loss, _, _ = simulate(
-                    policy=policy, scenario=self.scenario, batch_size=self.batch_size,
-                    training=False)
+                    policy=policy, scenario=self.scenario,
+                    batch_size=self.batch_size, training=False)
                 test_loss = test_loss.mean()
 
                 # Track the training and test losses.
@@ -69,8 +68,9 @@ class DPCRunner(PolicyRunner):
                 imitation_cost = rollout.data["imitation_cost"].sum(-1).mean()
 
                 pbar.set_description(
-                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}, {imitation_cost:1.3f}")
-                    
+                    f"{losses[-1]:1.3f}, {test_losses[-1]:1.3f}"
+                    f"{imitation_cost:1.3f}")
+
             except KeyboardInterrupt:
                 logger.info("stopped")
                 break
@@ -84,15 +84,14 @@ class DPCRunner(PolicyRunner):
 
         return loss, rollout, meta
 
-
     def run_policy(self, batch_size=None, training=False):
-        
+
         batch_size = batch_size if batch_size is not None else self.batch_size
-        
+
         loss, rollout, meta = simulate(
             policy=self.policy, scenario=self.scenario, batch_size=batch_size,
             training=training)
-        
+
         return loss, rollout, meta
 
 
@@ -102,10 +101,9 @@ def main(**config):
 
     train_data = runner.train_policy()
     test_data = runner.run()
-    
-    return save_runner(
-        runner=runner, config=config, test_data=test_data, train_data=train_data)
 
+    return save_runner(runner=runner, config=config,
+                       test_data=test_data, train_data=train_data)
 
 
 if __name__ == "__main__":
@@ -117,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--lr",
         type=float,
-        default=1e-2,
+        default=1e-3,
         help="learning rate"
     )
     parser.add_argument(
@@ -127,22 +125,16 @@ if __name__ == "__main__":
         help="number of training epochs"
     )
     parser.add_argument(
-        "--num-time-windows",
+        "--lookahead",
         type=int,
-        default=48,
-        help="number of time windows (embeddings) to use in policy model"
+        default=24,
+        help="number of lookahead steps"
     )
     parser.add_argument(
         "--hidden-dim",
         type=int,
         default=512,
         help="dimension of hidden layers"
-    )
-    parser.add_argument(
-        "--embed-dim",
-        type=int,
-        default=128,
-        help="dimension of embedding layers"
     )
     parser.add_argument(
         "--device",
@@ -157,9 +149,8 @@ if __name__ == "__main__":
     config["policy_config"] = {
         "model_config": {
             "hidden_dim": a.hidden_dim,
-            "embed_dim": a.embed_dim,
-            "num_time_windows": a.num_time_windows
         },
+        "num_lookahead_steps": a.lookahead,
         "lr": a.lr,
         "num_epochs": a.num_epochs,
         "device": a.device
@@ -167,4 +158,3 @@ if __name__ == "__main__":
     logger.info(f"CONFIG: {config}")
 
     _ = main(**config)
-

@@ -37,6 +37,7 @@ class BuildingControlEnv(gym.Env):
 
     def __init__(self,
                  scenario: Scenario = Scenario(),
+                 num_lookahead_steps: int = None,
                  training: bool = True):
         """ Initialize building control environment.
 
@@ -44,11 +45,14 @@ class BuildingControlEnv(gym.Env):
           scenario: a instance of the Scenario class, which contains
             information regarding the control episode, building model,
             demand response configures and more.
+          num_lookahead_steps: an integer indicates how many lookahead steps
+            of exogenous inputs will be included in the RL observation.
           training: a Boolean variable indicates this environment is used for
             training or testing.
         """
 
         self.scenario = scenario
+        self.num_lookahead_steps = num_lookahead_steps
         self.training = training
         self.num_zone = len(scenario.zone_model['x_k'])
 
@@ -57,18 +61,20 @@ class BuildingControlEnv(gym.Env):
             self.total_day_num = len(self.scenario.train_dates)
         else:
             self.total_day_num = len(self.scenario.test_dates)
-        self.exogenous_data = scenario.make_batch(
-            self.total_day_num, training=training)
+        self.exogenous_data = scenario.make_batch(self.total_day_num,
+                                                  training=training)
 
         # Define Gym required variables
-        # See "get_obs" functions for details.
         dr_type = self.scenario.dr_program.program_type
+
+        # See "get_obs" functions for details.
         if dr_type == 'TOU':
-            dim_obs = 14
+            dim_obs = 5 + 5 + 6 * self.num_lookahead_steps + 26
         elif dr_type == 'PC':
-            dim_obs = 26
+            dim_obs = 5 + 5 + 7 * self.num_lookahead_steps + 26
         elif dr_type == 'RTP':
-            dim_obs = 30
+            dim_obs = 5 + 5 + 7 * self.num_lookahead_steps + 26
+
         self.scalar_obs_upper = np.array([np.inf] * dim_obs)
         self.scalar_obs_lower = np.array([-np.inf] * dim_obs)
         self.observation_space = spaces.Box(self.scalar_obs_lower,
@@ -198,7 +204,8 @@ class BuildingControlEnv(gym.Env):
             comfort_min=comfort_min,
             comfort_max=comfort_max,
             pc_penalty=pc_penalty,
-            pc_limit=pc_limit)
+            pc_limit=pc_limit,
+            actions_to_imitate=None)
 
         # Evolve the dynamics
         self.x, self.zone_temp, _ = dyn.dynamics(
@@ -234,25 +241,27 @@ class BuildingControlEnv(gym.Env):
         different:
 
         Basic observation (All DR program cases have) includes:
+        - Current state x [5]
         - Indoor temperatures of five zones [5].
-        - Current step index: Step index [1].
-        - Trignometric representation of time [2].
-        - Outdoor env: mean temperature/q_solar for the past one hour [1 + 5].
-
+        - Outdoor env related: outdoor temperature for the lookahead horizon
+          [self.num_lookahead_steps] and q_solar forecast for all zones
+          [5 * self.num_lookahead_steps].
+        - Time embedding: one-hot embedding of the hour and a trignometric
+          representation of current step t. [24 + 2]
+        In total, this gives 36 + 6 * self.num_lookahead_steps elements in the
+        state vector.
 
         TOU Program: No additional info is included. Price info also not
-          included, since TOU price is fixed.
-          Total observation dimension is 14.
+          included, since TOU price is fixed and can be inferred from the time
+          embedding.
 
         PC Program:
-          - Power limit for the next one hour [12].
-          Total observation dimension is 26.
+          - Power limit for the lookahead period, which is known
+            [self.num_lookahead_steps].
 
         RTP Program:
-          - Predicted energy price for the next hour [12].
-          - Energy price and predicted price differences for the past four
-            hours, i.e., RTP - DAP [4].
-          Total observation dimension is 30.
+          - Predicted energy price/day-ahead price for the lookahead period
+            [self.num_lookahead_steps].
 
         Returns:
           obs: Numpy array. The observation array.
@@ -261,47 +270,45 @@ class BuildingControlEnv(gym.Env):
         normalized_zone_temp = self.normalize(self.zone_temp.tolist(),
                                               ZONE_TEMP_BOUNDS)
 
+        temp_oa = self.temp_oa.tolist()[self.step_idx:
+                                        (self.step_idx
+                                         + self.num_lookahead_steps)]
+        temp_oa = self.vector_padding(temp_oa, self.num_lookahead_steps)
+        normalized_temp_oa = self.normalize(temp_oa, OUTDOOR_TEMP_BOUNDS)
+
+        q_solar = self.q_solar.numpy()[
+            self.step_idx: self.step_idx + self.num_lookahead_steps, :]
+        q_solar_zones = [self.vector_padding(q_solar[:, idx].tolist(),
+                                             self.num_lookahead_steps)
+                         for idx in range(q_solar.shape[1])]
+        q_solar = sum(q_solar_zones, [])
+        normalized_q_solar = self.normalize(q_solar, Q_SOLAR_BOUNDS)
+
+        one_hot_t = [0] * 24
+        one_hot_t[int(self.step_idx / STEPS_PER_HOUR)] = 1
         degree = self.step_idx / 288.0 * 2 * np.pi
         trignometric_time = [np.sin(degree), np.cos(degree)]
 
-        mean_temp_oa = np.mean(self.temp_oa.tolist()[
-                               max(0, self.step_idx - STEPS_PER_HOUR):
-                               self.step_idx + 1])
-        normalized_temp_oa = self.normalize(mean_temp_oa, OUTDOOR_TEMP_BOUNDS)
-        mean_q_solar = np.mean(self.q_solar.numpy()[
-                               max(0, self.step_idx - STEPS_PER_HOUR):
-                               self.step_idx + 1, :], axis=0)
-        normalized_q_solar = self.normalize(mean_q_solar, Q_SOLAR_BOUNDS)
-
-        obs = (normalized_zone_temp + [self.step_idx / 288.0]
-               + trignometric_time + [normalized_temp_oa] + normalized_q_solar)
+        obs = (self.x.squeeze().tolist() + normalized_zone_temp
+               + normalized_temp_oa + normalized_q_solar + one_hot_t
+               + trignometric_time)
 
         if self.scenario.dr_program.program_type == 'PC':
             power_limit = self.scenario.dr_program.power_limit.values[
-                self.step_idx: self.step_idx + STEPS_PER_HOUR]
+                self.step_idx: self.step_idx + self.num_lookahead_steps]
             normalized_power_limit = self.normalize(power_limit,
                                                     POWER_LIMIT_BOUNDS)
             normalized_power_limit = self.vector_padding(
-                normalized_power_limit, STEPS_PER_HOUR)
+                normalized_power_limit, self.num_lookahead_steps)
             obs += normalized_power_limit
         elif self.scenario.dr_program.program_type == 'RTP':
-            price = self.predicted_energy_price.tolist()[self.step_idx:
-                                                         self.step_idx
-                                                         + STEPS_PER_HOUR]
+            price = self.predicted_energy_price.tolist()[
+                self.step_idx: self.step_idx + self.num_lookahead_steps]
             normalized_price = self.normalize(price, PRICE_BOUNDS)
             normalized_price = self.vector_padding(normalized_price,
-                                                   STEPS_PER_HOUR)
+                                                   self.num_lookahead_steps)
 
-            four_hour_price_diff = []
-            step_pointer = self.step_idx - STEPS_PER_HOUR
-            while step_pointer >= 0 and len(four_hour_price_diff) < 4:
-                four_hour_price_diff.append(self.price_diff[step_pointer])
-                step_pointer -= STEPS_PER_HOUR
-            four_hour_price_diff = self.vector_padding(four_hour_price_diff,
-                                                       4, 0.0)
-            four_hour_price_diff = self.normalize(four_hour_price_diff,
-                                                  PRICE_BOUNDS)
-            obs += (normalized_price + four_hour_price_diff)
+            obs += normalized_price
 
         obs = np.array(obs)
 
@@ -340,16 +347,12 @@ if __name__ == '__main__':
     # content below can be moved to test later.
     from lbc.demand_response import DemandResponseProgram as DRP
 
-    OBS_DIM = {'TOU': 14, 'PC': 26, 'RTP': 30}
-
-    drp = DRP('RTP')
+    drp = DRP('TOU')
     s = Scenario(dr_program=drp)
-    bce = BuildingControlEnv(scenario=s)
+    bce = BuildingControlEnv(scenario=s,
+                             num_lookahead_steps=24)
 
     obs = bce.reset()
-    assert len(obs) == OBS_DIM[drp.program_type], (
-        "Environment observation dimension does not meet requirement:"
-        "expect %d, got %d" % (OBS_DIM[drp.program_type], len(obs)))
 
     done = False
     reward_total = 0.0

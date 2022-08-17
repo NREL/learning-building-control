@@ -9,9 +9,21 @@ logger = logging.getLogger(__file__)
 
 class RLCRunner(PolicyRunner):
 
+    def __init__(self, policy_type: str = None, dr_program: str = None,
+                 batch_size: int = None, scenario_config: dict = None,
+                 policy_config: dict = None, results_dir: str = None,
+                 name_ext: str = None, **kwargs):
+
+        super().__init__(policy_type, dr_program, batch_size,
+                         scenario_config, policy_config, results_dir,
+                         name_ext, **kwargs)
+
+        self.num_lookahead_steps = self.policy.num_lookahead_steps
+
     @property
     def name(self):
-        return f"RLC-{self.dr_program}" + self.name_ext
+        la = self.num_lookahead_steps
+        return f"RLC-{self.dr_program}-{la}" + self.name_ext
 
     def run_policy(self, batch_size=None, training=False):
 
@@ -45,11 +57,18 @@ if __name__ == "__main__":
         default=None,
         help="node IP address for ray (needed if running with VPN)"
     )
+    parser.add_argument(
+        "--lookahead",
+        type=int,
+        default=2,
+        help="number of lookahead steps"
+    )
     a = parser.parse_args()
 
     # Use the args to construct a full configuration for the experiment.
     config = get_config("RLC", **vars(a))
     config["policy_config"]["node_ip_address"] = a.node_ip_address
+    config["policy_config"]["num_lookahead_steps"] = a.lookahead
     logger.info(f"CONFIG: {config}")
 
     _ = main(**config)
