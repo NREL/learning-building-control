@@ -18,8 +18,8 @@ class DPCRunner(PolicyRunner):
     @property
     def name(self):
         lr = self.policy_config["lr"]
-        nw = self.policy_config["model_config"]["num_time_windows"]
-        return f"DPC-{self.dr_program}-{nw}-{lr:0.3f}" + self.name_ext
+        la = self.policy.num_lookahead_steps
+        return f"DPC-{self.dr_program}-{la}-{lr:0.3f}" + self.name_ext
 
     def train_policy(self, **kwargs):
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--lr",
         type=float,
-        default=1e-2,
+        default=1e-3,
         help="learning rate"
     )
     parser.add_argument(
@@ -125,22 +125,16 @@ if __name__ == "__main__":
         help="number of training epochs"
     )
     parser.add_argument(
-        "--num-time-windows",
+        "--lookahead",
         type=int,
-        default=48,
-        help="number of time windows (embeddings) to use in policy model"
+        default=24,
+        help="number of lookahead steps"
     )
     parser.add_argument(
         "--hidden-dim",
         type=int,
         default=512,
         help="dimension of hidden layers"
-    )
-    parser.add_argument(
-        "--embed-dim",
-        type=int,
-        default=128,
-        help="dimension of embedding layers"
     )
     parser.add_argument(
         "--device",
@@ -155,9 +149,8 @@ if __name__ == "__main__":
     config["policy_config"] = {
         "model_config": {
             "hidden_dim": a.hidden_dim,
-            "embed_dim": a.embed_dim,
-            "num_time_windows": a.num_time_windows
         },
+        "num_lookahead_steps": a.lookahead,
         "lr": a.lr,
         "num_epochs": a.num_epochs,
         "device": a.device
