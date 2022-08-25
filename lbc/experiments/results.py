@@ -4,7 +4,13 @@ import os
 import pickle
 
 import pandas as pd
-import numpy as np
+
+from lbc.experiments.run_dpc import DPCRunner
+from lbc.experiments.run_cpl import CPLRunner
+from lbc.experiments.run_rlc import RLCRunner
+from lbc.experiments.run_mpc import MPCRunner
+from lbc.experiments.run_mpc_one_shot import MPCOneShotRunner
+from lbc.experiments.run_rbc import RBCRunner
 
 
 logging.basicConfig(level="INFO")
@@ -14,7 +20,7 @@ logger = logging.getLogger(__file__)
 def main(dr, results_dir=None):
 
     results_dir = results_dir if results_dir is not None else f"results-{dr}"
-    
+
     files = glob.glob(os.path.join(results_dir, f"*-{dr}*.p"))
     assert len(files) > 0, "no files found!"
 
@@ -28,8 +34,8 @@ def main(dr, results_dir=None):
             key = os.path.basename(f)
             result = {
                 key: {
-                    "test_loss": _data["loss"],
-                    "cpu_time": _data["cpu_time"]
+                    "test_loss": _data["test_data"][0].mean(),
+                    "cpu_time": _data["test_data"][2]["cpu_time"]
                 }
             }
             data.update(result)
@@ -46,7 +52,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "dr",
+        "--dr",
         type=str,
         help="DR program",
         choices=["TOU", "RTP", "PC"])
@@ -59,4 +65,3 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     _ = main(a.dr, a.results_dir)
-
