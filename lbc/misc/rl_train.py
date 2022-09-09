@@ -35,7 +35,7 @@ def main():
     parser.add_argument('--train_batch_size', type=int, default=5000)
     parser.add_argument('--episodes_per_batch', type=int, default=5000)
     parser.add_argument('--dr_program', type=str, default='RTP')
-    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--sigma', type=float, default=0.02)
     parser.add_argument('--run_hour', type=float, default=0.9)
     args = parser.parse_args()
@@ -76,6 +76,7 @@ def main():
         },
         'PPO': {
             "train_batch_size": args.train_batch_size,
+            "lr": args.lr
         }
     }
 

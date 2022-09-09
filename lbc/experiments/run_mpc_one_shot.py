@@ -56,6 +56,7 @@ if __name__ == "__main__":
         action="store_true",
         help="run MPC against the training scenarios (rather than the test set)"
     )
+    a = parser.parse_args()
 
     # Use the args to construct a full configuration for the experiment.
     config = get_config("MPCOneShot", **vars(a))
