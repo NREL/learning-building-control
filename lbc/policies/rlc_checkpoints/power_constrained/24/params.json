@@ -3,8 +3,8 @@
   "lr": 5e-05,
   "model": {
     "fcnet_hiddens": [
-      512,
-      512
+      32,
+      32
     ]
   },
   "num_workers": 71,
