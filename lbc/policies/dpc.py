@@ -1,5 +1,4 @@
 import logging
-from math import ceil, floor
 from typing import Tuple
 
 import numpy as np
@@ -8,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lbc.building_env import STEPS_PER_HOUR, BuildingControlEnv
+from lbc.building_env import STEPS_PER_HOUR
 from lbc.building_env import ZONE_TEMP_BOUNDS
 from lbc.building_env import POWER_LIMIT_BOUNDS
 from lbc.building_env import PRICE_BOUNDS, Q_SOLAR_BOUNDS, OUTDOOR_TEMP_BOUNDS
@@ -143,8 +142,9 @@ class DPCPolicy(Policy):
         if scenario.dr_program.program_type == "PC":
             pc_limit = scenario.dr_program.power_limit.values[
                 t: t + self.num_lookahead_steps]
-            batch_pc_limit = torch.Tensor([pc_limit.squeeze()
-                                           for _ in range(bsz)])
+            batch_pc_limit = torch.Tensor(
+                [pc_limit.reshape((np.dot(*pc_limit.shape),))
+                 for _ in range(bsz)])
             need_padding = self.num_lookahead_steps - batch_pc_limit.shape[1]
             batch_pc_limit = torch.nn.functional.pad(
                 batch_pc_limit, (0, need_padding), 'replicate')

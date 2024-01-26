@@ -27,10 +27,30 @@ POLICY_CHECKPOINTS = {
     #                    'power_constrained/checkpoint/checkpoint'),
     # 'RTP': os.path.join(THIS_DIR, 'rlc_checkpoints',
     #                     'real_time_pricing/checkpoint/checkpoint'),
-    # 'TOU': os.path.join(THIS_DIR, 'rlc_checkpoints',
-    #                     'time_of_use/checkpoint/checkpoint'),
-    'TOU-24': '/Users/xzhang2/CodeRepo/learning-building-control/lbc/results/BuildingControlTOU24Env-v0/PPO_BuildingControlTOU24Env-v0_91656_00000_100_0_2022-08-14_13-59-12/checkpoint_000515/checkpoint-515',
-    'RTP-24': '/Users/xzhang2/CodeRepo/learning-building-control/lbc/results/BuildingControlRTP24Env-v0/PPO_BuildingControlRTP24Env-v0_655ee_00000_370_0_2022-08-14_18-37-09/checkpoint_000506/checkpoint-506'
+    'TOU-24': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                           'time_of_use/24/checkpoint/checkpoint'),
+    'RTP-24': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                           'real_time_pricing/24/checkpoint/checkpoint'),
+    'PC-24': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                          'power_constrained/24/checkpoint/checkpoint'),
+    'TOU-12': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                           'time_of_use/12/checkpoint/checkpoint'),
+    'RTP-12': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                           'real_time_pricing/12/checkpoint/checkpoint'),
+    'PC-12': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                          'power_constrained/12/checkpoint/checkpoint'),
+    'TOU-6': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                          'time_of_use/6/checkpoint/checkpoint'),
+    'RTP-6': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                          'real_time_pricing/6/checkpoint/checkpoint'),
+    'PC-6': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                         'power_constrained/6/checkpoint/checkpoint'),
+    'TOU-3': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                          'time_of_use/3/checkpoint/checkpoint'),
+    'RTP-3': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                          'real_time_pricing/3/checkpoint/checkpoint'),
+    'PC-3': os.path.join(THIS_DIR, 'rlc_checkpoints',
+                         'power_constrained/3/checkpoint/checkpoint'),
 }
 
 
@@ -200,7 +220,7 @@ class RLCPolicy(Policy):
             normalized_power_limit = bce.normalize(power_limit,
                                                    POWER_LIMIT_BOUNDS)
             normalized_power_limit = bce.vector_padding(
-                normalized_power_limit.tolist(), self.num_lookahead_steps)
+                normalized_power_limit, self.num_lookahead_steps)
             normalized_power_limit = np.array([normalized_power_limit
                                                for _ in range(bsz)])
             obs = np.hstack([obs, normalized_power_limit])
